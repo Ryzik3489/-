@@ -1,191 +1,166 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>WORLD PIXEL</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Unbounded:wght@700;900&display=swap" rel="stylesheet" />
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: monospace; touch-action: none; -webkit-user-select: none; }
-        canvas { display: block; image-rendering: pixelated; }
-        
-        /* UI в стиле минимализм */
-        #ui { position: fixed; top: 15px; left: 15px; right: 15px; pointer-events: none; display: flex; justify-content: space-between; z-index: 100; }
-        .panel { 
-            background: rgba(0,0,0,0.0); 
-            border: 1px solid #333; 
-            padding: 6px 10px; 
-            color: #0f0; 
-            pointer-events: auto; 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            border-radius: 2px; 
-            font-size: 12px;
-            letter-spacing: 1px;
-        }
-        
-        /* ЧАТ МИНИМАЛ */
-        #chat-container { position: fixed; bottom: 15px; left: 15px; width: 250px; pointer-events: auto; z-index: 1000; }
-        #chat-input { 
-            width: 100%; 
-            background: rgba(0,0,0,0.8); 
-            border: 1px solid #333; 
-            color: #fff; 
-            padding: 8px; 
-            outline: none; 
-            font-family: monospace;
-            font-size: 12px;
-        }
-        #chat-messages { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; pointer-events: none; }
-        .msg { color: #aaa; font-size: 11px; animation: fadeOut 5s forwards; }
 
-        input[type="color"] { width: 24px; height: 24px; border: 1px solid #444; background: none; cursor: pointer; padding: 0; }
-        #cooldown { position: fixed; bottom: 0; left: 0; height: 2px; background: #0f0; width: 0%; z-index: 1001; }
-        
-        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    <style>
+        :root { --bg: #0b0e11; --panel: rgba(23, 28, 34, 0.9); --accent: #007bff; --text: #ffffff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; position: fixed; touch-action: none; }
+        canvas { display: block; image-rendering: pixelated; }
+
+        #ui-header { position: fixed; top: 0; left: 0; right: 0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--panel); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .brand { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 900; }
+        .brand span { color: var(--accent); }
+
+        /* ОКНО ЗАГРУЗКИ ФОТО */
+        #import-panel { position: fixed; top: 80px; left: 20px; background: var(--panel); padding: 15px; border-radius: 15px; z-index: 1000; width: 220px; display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        #import-panel h4 { margin: 0; font-size: 12px; text-transform: uppercase; color: var(--accent); }
+        .btn { background: var(--accent); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        input[type="number"] { background: #1c2128; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px; border-radius: 5px; width: 60px; }
+
+        #bottom-bar { position: fixed; bottom: 20px; left: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000; }
+        #chat-input { flex: 1; background: var(--panel); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 15px; color: white; outline: none; }
+        input[type="color"] { width: 45px; height: 45px; border: none; background: none; cursor: pointer; padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border-radius: 12px; border: 2px solid white; }
     </style>
 </head>
 <body>
 
-    <div id="cooldown"></div>
+    <header id="ui-header">
+        <div class="brand">WORLD PIXEL<span>.</span></div>
+        <div style="font-size: 12px; opacity: 0.8;">ОНЛАЙН: <span id="online-count">1</span> | <span id="coords">0,0</span></div>
+    </header>
 
-    <div id="ui">
-        <div class="panel">
-            <input type="color" id="colorPicker" value="#00ff00">
-            <span id="coords">0,0</span>
+    <div id="import-panel">
+        <h4>Авто-постройка</h4>
+        <input type="file" id="imageLoader" accept="image/*" style="font-size: 10px;">
+        <div style="display:flex; justify-content: space-between; align-items: center; font-size: 11px;">
+            Ширина (px): <input type="number" id="imgWidth" value="32" min="1" max="100">
         </div>
-        <div class="panel">ONLINE: <span id="online">1</span></div>
+        <button class="btn" id="startBuild">РАЗВЕРНУТЬ НА ХОЛСТ</button>
+        <div id="buildStatus" style="font-size: 10px; color: #4caf50;"></div>
     </div>
 
-    <div id="chat-container">
-        <div id="chat-messages"></div>
-        <input type="text" id="chat-input" placeholder="type message..." maxlength="50">
+    <div id="bottom-bar">
+        <input type="text" id="username" placeholder="Ник" style="width: 60px;">
+        <input type="text" id="chat-input" placeholder="Сообщение...">
+        <input type="color" id="color-picker" value="#007bff">
     </div>
 
     <canvas id="canvas"></canvas>
 
 <script>
-    // Тестовый сервер
-    const firebaseConfig = {
-        apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
-        authDomain: "telega-85cca.firebaseapp.com",
-        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com",
-        projectId: "telega-85cca",
-        storageBucket: "telega-85cca.firebasestorage.app",
-        messagingSenderId: "213088586635",
-        appId: "1:213088586635:web:5ee9a8985a9fb5403f7d8e"
-    };
-
-    firebase.initializeApp(firebaseConfig);
+    const config = { apiKey: "AIzaSyCWfc3TzdVLaiwOhUrEfDaGsEHrUInzuJM", databaseURL: "https://doodle-102-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(config);
     const db = firebase.database();
 
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { alpha: false });
-    const world = document.createElement('canvas');
-    const wctx = world.getContext('2d', { alpha: false });
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d', { alpha: false });
+    const world = document.createElement('canvas'), wctx = world.getContext('2d', { alpha: false });
     const W_SIZE = 2000;
+    world.width = world.height = W_SIZE; wctx.fillStyle = "#fff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    world.width = world.height = W_SIZE;
-    wctx.fillStyle = "#FFFFFF";
-    wctx.fillRect(0, 0, W_SIZE, W_SIZE);
+    let zoom = 8.0, offset = { x: window.innerWidth/2, y: window.innerHeight/2 }, lastDraw = 0;
 
-    let zoom = 8.0, offset = { x: window.innerWidth/2, y: window.innerHeight/2 };
-    let lastDraw = 0;
-    const CD_TIME = 500;
-
-    // ЧАТ
-    const chatInput = document.getElementById('chat-input');
-    const chatMessages = document.getElementById('chat-messages');
-
-    chatInput.onkeydown = e => {
-        if(e.key === 'Enter' && chatInput.value.trim() !== '') {
-            db.ref('chat').push({ msg: chatInput.value, t: Date.now() });
-            chatInput.value = '';
-        }
+    // --- ЛОГИКА ИМПОРТА ФОТО ---
+    const imageLoader = document.getElementById('imageLoader');
+    const startBtn = document.getElementById('startBuild');
+    
+    startBtn.onclick = function() {
+        if(!imageLoader.files[0]) return alert("Выбери файл!");
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const w = parseInt(document.getElementById('imgWidth').value);
+                const h = Math.round(img.height * (w / img.width));
+                const tempCanvas = document.createElement('canvas');
+                const tctx = tempCanvas.getContext('2d');
+                tempCanvas.width = w; tempCanvas.height = h;
+                tctx.drawImage(img, 0, 0, w, h);
+                const data = tctx.getImageData(0, 0, w, h).data;
+                
+                // Центр экрана для постройки
+                const startX = Math.floor((window.innerWidth/2 - offset.x)/zoom + W_SIZE/2);
+                const startY = Math.floor((window.innerHeight/2 - offset.y)/zoom + W_SIZE/2);
+                
+                startBtn.disabled = true;
+                let i = 0;
+                const buildInterval = setInterval(() => {
+                    if (i >= w * h) {
+                        clearInterval(buildInterval);
+                        startBtn.disabled = false;
+                        document.getElementById('buildStatus').innerText = "Готово!";
+                        return;
+                    }
+                    const pxIndex = i * 4;
+                    const r = data[pxIndex], g = data[pxIndex+1], b = data[pxIndex+2], a = data[pxIndex+3];
+                    if (a > 128) {
+                        const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+                        const curX = startX + (i % w);
+                        const curY = startY + Math.floor(i / w);
+                        db.ref('canvas/' + curX + '_' + curY).set({ x: curX, y: curY, color: hex });
+                    }
+                    i++;
+                    document.getElementById('buildStatus').innerText = `Строю: ${Math.round((i/(w*h))*100)}%`;
+                }, 550); // Кулдаун полсекунды на пиксель, чтобы Firebase не забанил
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(imageLoader.files[0]);
     };
 
-    db.ref('chat').limitToLast(3).on('child_added', s => {
-        const d = s.val();
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerText = `> ${d.msg}`;
-        chatMessages.appendChild(div);
-        setTimeout(() => div.remove(), 5000);
+    // --- СТАНДАРТНЫЙ ДВИЖОК ---
+    db.ref('canvas').on('child_added', s => { const p = s.val(); wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); });
+    db.ref('canvas').on('child_changed', s => { const p = s.val(); wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); });
+    db.ref('presence').on('value', s => document.getElementById('online-count').innerText = s.numChildren());
+    const myPres = db.ref('presence').push();
+    db.ref('.info/connected').on('value', s => { if(s.val()){ myPres.set(true); myPres.onDisconnect().remove(); } });
+
+    function applyZoom(delta, cx, cy) {
+        const oldZ = zoom; zoom = Math.min(Math.max(zoom * delta, 0.1), 80);
+        offset.x = cx - (cx - offset.x) * (zoom / oldZ); offset.y = cy - (cy - offset.y) * (zoom / oldZ);
+    }
+
+    let isPan = false, lastT = {x:0,y:0}, startTime = 0;
+    canvas.addEventListener('touchstart', e => {
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        startTime = Date.now();
+        if(e.touches.length === 1) { isPan = true; lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY}; }
+    });
+    window.addEventListener('touchmove', e => {
+        if(isPan && e.touches.length === 1) {
+            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y;
+            lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        }
+    });
+    window.addEventListener('touchend', e => {
+        if(Date.now() - startTime < 150) {
+            const p = { x: Math.floor((lastT.x-offset.x)/zoom + W_SIZE/2), y: Math.floor((lastT.y-offset.y)/zoom + W_SIZE/2) };
+            db.ref('canvas/'+p.x+'_'+p.y).set({x:p.x, y:p.y, color: document.getElementById('color-picker').value});
+        }
+        isPan = false;
     });
 
-    // ОТКЛЮЧЕНИЕ КОНТЕКСТНОГО МЕНЮ (ПРАВАЯ КНОПКА ТЕПЕРЬ ТОЛЬКО ДЛЯ ДВИЖЕНИЯ)
-    window.oncontextmenu = e => e.preventDefault();
-
-    // СИНХРОНИЗАЦИЯ
-    db.ref('canvas').on('child_added', s => drawToBuffer(s.val()));
-    db.ref('canvas').on('child_changed', s => drawToBuffer(s.val()));
-    
-    const onlineRef = db.ref('presence').push(true);
-    onlineRef.onDisconnect().remove();
-    db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren());
-
-    function drawToBuffer(p) {
-        if(!p) return;
-        wctx.fillStyle = p.color;
-        wctx.fillRect(p.x, p.y, 1, 1);
-    }
-
-    function sendPixel(x, y) {
-        const now = Date.now();
-        if(now - lastDraw < CD_TIME || x < 0 || x >= W_SIZE || y < 0 || y >= W_SIZE) return;
-        lastDraw = now;
-        const color = document.getElementById('colorPicker').value;
-        const bar = document.getElementById('cooldown');
-        bar.style.transition = 'none'; bar.style.width = '100%';
-        db.ref('canvas/' + x + '_' + y).set({ x, y, color });
-        setTimeout(() => { bar.style.transition = `width ${CD_TIME}ms linear`; bar.style.width = '0%'; }, 20);
-    }
-
-    // УПРАВЛЕНИЕ
-    let isDraw = false, isPan = false;
-    function getP(cx, cy) {
-        return {
-            x: Math.floor((cx - offset.x) / zoom + W_SIZE/2),
-            y: Math.floor((cy - offset.y) / zoom + W_SIZE/2)
-        };
-    }
-
-    canvas.onmousedown = e => { 
-        if(e.button === 0) { isDraw = true; const p = getP(e.clientX, e.clientY); sendPixel(p.x, p.y); } 
-        else if(e.button === 2) isPan = true; // ПРАВАЯ КНОПКА = ТОЛЬКО ДВИЖЕНИЕ
-    };
-    
     window.onmousemove = e => {
-        const p = getP(e.clientX, e.clientY);
+        const p = { x: Math.floor((e.clientX-offset.x)/zoom + W_SIZE/2), y: Math.floor((e.clientY-offset.y)/zoom + W_SIZE/2) };
         document.getElementById('coords').innerText = `${p.x},${p.y}`;
-        if(isDraw) sendPixel(p.x, p.y);
-        if(isPan) { offset.x += e.movementX; offset.y += e.movementY; }
     };
-    
-    window.onmouseup = () => isDraw = isPan = false;
-    window.onwheel = e => { zoom = Math.min(Math.max(zoom * (e.deltaY < 0 ? 1.2 : 0.8), 0.1), 80); };
+    window.onwheel = e => applyZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY);
 
     function render() {
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        ctx.imageSmoothingEnabled = false;
-        ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.save();
-        ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight; ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = "#0b0e11"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        
-        // Тонкая сетка при сильном зуме
-        if(zoom > 20) {
-            ctx.beginPath(); ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 0.05;
-            for(let x=0; x<=W_SIZE; x++) { ctx.moveTo(x-W_SIZE/2, -W_SIZE/2); ctx.lineTo(x-W_SIZE/2, W_SIZE/2); }
-            for(let y=0; y<=W_SIZE; y++) { ctx.moveTo(-W_SIZE/2, y-W_SIZE/2); ctx.lineTo(W_SIZE/2, y-W_SIZE/2); }
-            ctx.stroke();
-        }
-        ctx.restore();
-        requestAnimationFrame(render);
-    }
-    render();
+        ctx.restore(); requestAnimationFrame(render);
+    } render();
 </script>
 </body>
 </html>
