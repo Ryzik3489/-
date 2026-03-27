@@ -1,1 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WORLD PIXEL</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Unbounded:wght@900&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --bg: #0b0e11; --panel: rgba(23, 28, 34, 0.95); --accent: #4285F4; --text: #ffffff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; touch-action: none; }
+        canvas { display: block; image-rendering: pixelated; }
+
+        /* ИНТЕРФЕЙС */
+        #ui-header { position: fixed; top: 0; left: 0; right: 0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--panel); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .brand { font-family: 'Unbounded', sans-serif; font-size: 16px; letter-spacing: 1px; }
+        .brand span { color: var(--accent); }
+
+        /* ОКНО ЛОГИНА */
+        #login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(10px); }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 300px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
+        /* ЧАТ */
+        #chat-container { position: fixed; bottom: 85px; left: 15px; width: 280px; z-index: 1000; pointer-events: none; }
+        #chat-messages { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow: hidden; justify-content: flex-end; }
+        .msg { background: var(--panel); padding: 8px 12px; border-radius: 12px; font-size: 13px; border: 1px solid rgba(255,255,255,0.08); animation: fIn 0.3s ease-out; pointer-events: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .msg-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .msg-head img { width: 18px; height: 18px; border-radius: 50%; }
+        .msg-head b { color: var(--accent); font-size: 11px; font-weight: 600; }
+
+        #bottom-bar { position: fixed; bottom: 20px; left: 15px; right: 15px; display: flex; gap: 10px; z-index: 1000; }
+        #chat-input { flex: 1; background: var(--panel); border: 1px solid rgba(255,255,255,0.1); padding: 14px; border-radius: 18px; color: white; outline: none; backdrop-filter: blur(10px); }
+        
+        .btn-google { background: white; color: #000; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: 0.2s; }
+        .btn-google:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(66, 133, 244, 0.3); }
+
+        #cooldown-bar { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; z-index: 1001; transition: width 0.5s linear; }
+
+        @keyframes fIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="cooldown-bar"></div>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="brand" style="font-size: 24px; margin-bottom: 10px;">WORLD<span>PIXEL</span></div>
+            <p style="opacity: 0.6; font-size: 13px; margin-bottom: 25px;">Войди через Google, чтобы рисовать шедевры вместе со всеми</p>
+            <button class="btn-google" id="btn-login">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+                Google Login
+            </button>
+        </div>
+    </div>
+
+    <header id="ui-header">
+        <div class="brand">WORLD<span>PIXEL</span></div>
+        <div style="font-size: 12px; opacity: 0.8;"><span id="coords">0, 0</span> | ОНЛАЙН: <span id="online">1</span></div>
+    </header>
+
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+    </div>
+
+    <div id="bottom-bar">
+        <input type="text" id="chat-input" placeholder="Написать в чат..." maxlength="60">
+        <input type="color" id="color-picker" value="#4285F4" style="width:45px; height:45px; border:none; background:none; cursor:pointer;">
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+<script>
+    const config = { apiKey: "AIzaSyCWfc3TzdVLaiwOhUrEfDaGsEHrUInzuJM", databaseURL: "https://doodle-102-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(config);
+    const db = firebase.database(), auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d', { alpha: false });
+    const world = document.createElement('canvas'), wctx = world.getContext('2d', { alpha: false });
+    const W_SIZE = 2000; world.width = world.height = W_SIZE;
+    wctx.fillStyle = "#fff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
+
+    let zoom = 8.0, offset = { x: window.innerWidth/2, y: window.innerHeight/2 }, lastDraw = 0;
+    let currentUser = null;
+
+    // --- AUTH ---
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            currentUser = user;
+            document.getElementById('login-overlay').style.display = 'none';
+        } else {
+            document.getElementById('login-overlay').style.display = 'flex';
+        }
+    });
+    document.getElementById('btn-login').onclick = () => auth.signInWithPopup(provider);
+
+    // --- CHAT ---
+    const chatInput = document.getElementById('chat-input');
+    chatInput.onkeydown = e => {
+        if(e.key === 'Enter' && chatInput.value.trim() && currentUser) {
+            db.ref('chat').push({
+                u: currentUser.displayName,
+                p: currentUser.photoURL,
+                m: chatInput.value.trim(),
+                t: Date.now()
+            });
+            chatInput.value = '';
+        }
+    };
+
+    db.ref('chat').limitToLast(12).on('child_added', s => {
+        const d = s.val();
+        const m = document.createElement('div');
+        m.className = 'msg';
+        m.innerHTML = `<div class="msg-head"><img src="${d.p}"><b>${d.u}</b></div>${d.m}`;
+        document.getElementById('chat-messages').appendChild(m);
+        setTimeout(() => m.remove(), 12000);
+    });
+
+    // --- CANVAS ENGINE ---
+    db.ref('canvas').on('child_added', s => { const p = s.val(); wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); });
+    db.ref('canvas').on('child_changed', s => { const p = s.val(); wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); });
+
+    function sendPixel(x, y) {
+        if(!currentUser || Date.now() - lastDraw < 500) return;
+        if(x < 0 || x >= W_SIZE || y < 0 || y >= W_SIZE) return;
+        
+        lastDraw = Date.now();
+        db.ref('canvas/' + x + '_' + y).set({ x, y, c: document.getElementById('color-picker').value, uid: currentUser.uid });
+
+        const bar = document.getElementById('cooldown-bar');
+        bar.style.transition = 'none'; bar.style.width = '100%';
+        setTimeout(() => { bar.style.transition = 'width 0.5s linear'; bar.style.width = '0%'; }, 10);
+    }
+
+    // --- CONTROLS ---
+    let isPan = false, startT = {x:0, y:0}, lastT = {x:0, y:0}, startTime = 0;
+    
+    canvas.addEventListener('touchstart', e => {
+        if(e.target.tagName === 'INPUT') return;
+        startTime = Date.now();
+        if(e.touches.length === 1) { isPan = true; startT = {x: e.touches[0].clientX, y: e.touches[0].clientY}; lastT = {...startT}; }
+    }, {passive: false});
+
+    window.addEventListener('touchmove', e => {
+        if(isPan && e.touches.length === 1) {
+            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y;
+            lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        }
+    }, {passive: false});
+
+    window.addEventListener('touchend', e => {
+        if(Date.now() - startTime < 150) {
+            const p = { 
+                x: Math.floor((startT.x - offset.x) / zoom + W_SIZE / 2), 
+                y: Math.floor((startT.y - offset.y) / zoom + W_SIZE / 2) 
+            };
+            sendPixel(p.x, p.y);
+        }
+        isPan = false;
+    });
+
+    window.onmousemove = e => {
+        const p = { x: Math.floor((e.clientX - offset.x) / zoom + W_SIZE / 2), y: Math.floor((e.clientY - offset.y) / zoom + W_SIZE / 2) };
+        document.getElementById('coords').innerText = `${p.x}, ${p.y}`;
+        if(isPan) { offset.x += e.movementX; offset.y += e.movementY; }
+    };
+    window.onmousedown = e => { if(e.button === 2 || e.button === 1) isPan = true; };
+    window.onmouseup = () => isPan = false;
+    window.onwheel = e => {
+        const oldZ = zoom; zoom = Math.min(Math.max(zoom * (e.deltaY < 0 ? 1.2 : 0.8), 0.1), 80);
+        offset.x = e.clientX - (e.clientX - offset.x) * (zoom / oldZ);
+        offset.y = e.clientY - (e.clientY - offset.y) * (zoom / oldZ);
+    };
+    window.oncontextmenu = e => e.preventDefault();
+
+    // --- ONLINE ---
+    const myPres = db.ref('presence').push();
+    db.ref('.info/connected').on('value', s => { if(s.val()){ myPres.set(true); myPres.onDisconnect().remove(); } });
+    db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren());
+
+    function render() {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight; ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = "#0b0e11"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
+        ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
+        ctx.restore(); requestAnimationFrame(render);
+    } render();
+</script>
+</body>
+</html>
