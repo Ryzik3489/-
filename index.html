@@ -3,60 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel | Final Clear</title>
+    <title>World Pixel | Ultra Sharp</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { --accent: #007bff; --bg: white; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e0e0e0; font-family: sans-serif; touch-action: none; }
+        :root { --accent: #007bff; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f0f0; font-family: sans-serif; touch-action: none; }
         
-        /* ЧЕТКОСТЬ ПИКСЕЛЕЙ */
+        /* СТИЛИ ДЛЯ МАКСИМАЛЬНОЙ ЧЕТКОСТИ */
         canvas { 
             display: block; 
-            image-rendering: optimizeSpeed;
             image-rendering: -moz-crisp-edges;
             image-rendering: -webkit-optimize-contrast;
-            image-rendering: -o-crisp-edges;
-            image-rendering: pixelated; /* ВОТ ЭТО ДЕЛАЕТ РИСУНОК ЧЕТКИМ */
-            -ms-interpolation-mode: nearest-neighbor;
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
         }
 
-        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; gap: 5px; }
-        .box { background: var(--bg); border: 1px solid #ccc; border-radius: 8px; padding: 5px 10px; color: #111; pointer-events: auto; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; }
+        .box { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 8px 12px; color: #111; pointer-events: auto; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         
-        input[type="text"] { border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; width: 80px; font-size: 12px; outline: none; }
-        .val { font-weight: 800; font-size: 13px; }
-        .lbl { font-size: 8px; color: #888; text-transform: uppercase; }
+        input[type="text"] { border: 1px solid #eee; border-radius: 6px; padding: 5px; width: 90px; font-size: 13px; outline: none; }
+        .val { font-weight: 800; color: var(--accent); }
 
-        #chat-wrap { position: fixed; bottom: 15px; left: 10px; width: 260px; pointer-events: none; z-index: 100; }
-        #chat-msgs { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-        .msg { background: white; border: 1px solid #ddd; padding: 5px 10px; border-radius: 6px; color: #111; font-size: 12px; width: fit-content; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .sys { border-left: 3px solid #00ff88; color: #00aa66; font-size: 11px; font-style: italic; }
-        #chat-in { width: 100%; background: white; border: 1px solid #ccc; padding: 10px; border-radius: 10px; color: #111; outline: none; pointer-events: auto; box-sizing: border-box; }
+        #chat-wrap { position: fixed; bottom: 20px; left: 10px; width: 280px; pointer-events: none; z-index: 100; }
+        #chat-msgs { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+        .msg { background: white; padding: 6px 12px; border-radius: 10px; font-size: 13px; width: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .sys { color: #28a745; font-weight: bold; font-size: 11px; }
 
-        #cd { position: fixed; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; z-index: 101; }
+        #chat-in { width: 100%; background: white; border: 1px solid #ddd; padding: 12px; border-radius: 15px; outline: none; pointer-events: auto; box-sizing: border-box; }
+        #cd { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; z-index: 110; }
     </style>
 </head>
 <body>
     <div id="cd"></div>
     <div id="ui">
         <div class="box">
-            <input type="color" id="cp" value="#007bff" style="width:22px;height:22px;border:none;padding:0;">
-            <input type="text" id="nick-in" placeholder="Твой ник" maxlength="12">
+            <input type="color" id="cp" value="#007bff" style="width:25px;height:25px;border:none;padding:0;background:none;cursor:pointer;">
+            <input type="text" id="nick-in" placeholder="Ник">
         </div>
         <div class="box">
-            <div style="text-align:right">
-                <div class="lbl">ОНЛАЙН: <span class="val" id="online">1</span></div>
-                <div class="val" id="coords" style="font-size:10px">0, 0</div>
+            <div style="text-align:right; font-size:11px;">
+                Онлайн: <span class="val" id="online">1</span><br>
+                <span id="coords">0, 0</span>
             </div>
         </div>
     </div>
-
-    <div id="chat-wrap">
-        <div id="chat-msgs"></div>
-        <input type="text" id="chat-in" placeholder="Нажми Enter для чата...">
-    </div>
-
+    <div id="chat-wrap"><div id="chat-msgs"></div><input type="text" id="chat-in" placeholder="Чат..."></div>
     <canvas id="cvs"></canvas>
 
 <script>
@@ -67,117 +59,105 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let myNick = localStorage.getItem('wp_n') || "Игрок" + Math.floor(Math.random()*99);
+    let myNick = localStorage.getItem('wp_nick_sharp') || "Игрок" + Math.floor(Math.random()*99);
     document.getElementById('nick-in').value = myNick;
-    document.getElementById('nick-in').onchange = (e) => { myNick = e.target.value; localStorage.setItem('wp_n', myNick); };
+    document.getElementById('nick-in').onchange = (e) => { myNick = e.target.value; localStorage.setItem('wp_nick_sharp', myNick); };
 
     const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d', {alpha: false});
     const world = document.createElement('canvas'), wctx = world.getContext('2d', {alpha: false});
     const W_SIZE = 2000; world.width = world.height = W_SIZE;
     wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    let zoom = 10.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
+    let zoom = 15.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
 
-    // СЕТЬ И ВХОД/ВЫХОД
-    const myStatusRef = db.ref('presence').push();
+    // СИНХРОНИЗАЦИЯ
+    const myRef = db.ref('presence').push();
     db.ref('.info/connected').on('value', s => {
         if(s.val()){
-            myStatusRef.set({ n: myNick });
-            myStatusRef.onDisconnect().remove();
-            db.ref('chat').push({ s: true, m: `➡️ ${myNick} зашел` });
+            myRef.set({ n: myNick });
+            myRef.onDisconnect().remove();
+            db.ref('chat').push({ s: true, m: `+ ${myNick} зашел` });
         }
     });
 
-    db.ref('presence').on('child_removed', s => {
-        const u = s.val();
-        if(u) db.ref('chat').push({ s: true, m: `⬅️ ${u.n} вышел` });
+    db.ref('canvas').on('child_added', s => { 
+        const p = s.val(); 
+        if(p) { wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }
     });
-
-    db.ref('canvas').on('child_added', s => { const p = s.val(); if(p){ wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }});
-    db.ref('canvas').on('child_changed', s => { const p = s.val(); if(p){ wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }});
+    db.ref('canvas').on('child_changed', s => { 
+        const p = s.val(); 
+        if(p) { wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }
+    });
     db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
 
-    // УПРАВЛЕНИЕ
     const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
-    
-    function setZoom(d, cx, cy) {
-        const oldZ = zoom; zoom = Math.min(Math.max(zoom * d, 0.5), 100);
-        offset.x = cx - (cx - offset.x) * (zoom / oldZ); offset.y = cy - (cy - offset.y) * (zoom / oldZ);
-    }
-
-    cvs.onwheel = e => { e.preventDefault(); setZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY); };
-
-    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false, startTime = 0;
 
     function place(x, y) {
-        if(Date.now() - lastDraw < 500 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
+        if(Date.now() - lastDraw < 300 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
         lastDraw = Date.now();
         db.ref('canvas/'+x+'_'+y).set({x, y, c: document.getElementById('cp').value});
         const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
-        setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
+        setTimeout(()=>{ b.style.transition='width 300ms linear'; b.style.width='0%'; }, 20);
     }
 
-    cvs.onmousedown = e => { 
-        if(e.button === 0) { isDrag = false; startP = {x: e.clientX, y: e.clientY}; }
-        else isPan = true; lastP = {x: e.clientX, y: e.clientY};
-    };
+    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false, lastDist = 0;
 
-    window.onmousemove = e => {
+    function handleZoom(d, mx, my) {
+        const oldZ = zoom;
+        zoom = Math.min(Math.max(zoom * d, 0.5), 150);
+        offset.x = mx - (mx - offset.x) * (zoom / oldZ);
+        offset.y = my - (my - offset.y) * (zoom / oldZ);
+    }
+
+    cvs.onwheel = e => { e.preventDefault(); handleZoom(e.deltaY < 0 ? 1.25 : 0.75, e.clientX, e.clientY); };
+    cvs.onmousedown = e => { if(e.button===0){ isDrag=false; startP={x:e.clientX, y:e.clientY}; } else isPan=true; lastP={x:e.clientX, y:e.clientY}; };
+    window.onmousemove = e => { 
         const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = p.x + ", " + p.y;
-        if(isPan || (e.buttons === 1 && isDrag)) { offset.x += e.clientX - lastP.x; offset.y += e.clientY - lastP.y; }
-        if(Math.hypot(e.clientX - startP.x, e.clientY - startP.y) > 8) isDrag = true;
-        lastP = {x: e.clientX, y: e.clientY};
+        if(isPan || (e.buttons===1 && isDrag)){ offset.x += e.clientX-lastP.x; offset.y += e.clientY-lastP.y; }
+        if(Math.hypot(e.clientX-startP.x, e.clientY-startP.y) > 5) isDrag = true;
+        lastP = {x:e.clientX, y:e.clientY};
     };
+    window.onmouseup = e => { if(e.button===0 && !isDrag && document.activeElement.tagName !== 'INPUT') place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y); isPan=false; };
 
-    window.onmouseup = e => {
-        if(e.button === 0 && !isDrag && document.activeElement.tagName !== 'INPUT') place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y);
-        isPan = false;
-    };
-
-    // ТАЧИ (МОБИЛКА)
-    let lastDist = 0;
-    cvs.addEventListener('touchstart', e => {
-        startTime = Date.now(); isDrag = false;
-        if(e.touches.length === 1) { startP = {x: e.touches[0].clientX, y: e.touches[0].clientY}; lastP = {...startP}; }
-        else if(e.touches.length === 2) { lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
-    });
-
+    cvs.addEventListener('touchstart', e => { 
+        isDrag=false; if(e.touches.length===1){ startP={x:e.touches[0].clientX, y:e.touches[0].clientY}; lastP={...startP}; } 
+        else if(e.touches.length===2) { lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); } 
+    }, {passive:false});
     cvs.addEventListener('touchmove', e => {
         e.preventDefault();
-        if(e.touches.length === 1) {
-            offset.x += e.touches[0].clientX - lastP.x; offset.y += e.touches[0].clientY - lastP.y;
-            if(Math.hypot(e.touches[0].clientX - startP.x, e.touches[0].clientY - startP.y) > 10) isDrag = true;
-            lastP = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-        } else if(e.touches.length === 2) {
-            isDrag = true;
-            const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            setZoom(d / lastDist, (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
-            lastDist = d;
-        }
-    }, {passive: false});
-
-    cvs.addEventListener('touchend', e => {
-        if(e.touches.length === 0 && !isDrag && Date.now() - startTime < 200) place(getP(startP.x, startP.y).x, getP(startP.x, startP.y).y);
-    });
+        if(e.touches.length===1){ offset.x += e.touches[0].clientX-lastP.x; offset.y += e.touches[0].clientY-lastP.y; if(Math.hypot(e.touches[0].clientX-startP.x, e.touches[0].clientY-startP.y)>10) isDrag=true; lastP={x:e.touches[0].clientX, y:e.touches[0].clientY}; }
+        else if(e.touches.length===2){ isDrag=true; const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); const mx=(e.touches[0].clientX+e.touches[1].clientX)/2, my=(e.touches[0].clientY+e.touches[1].clientY)/2; handleZoom(d / lastDist, mx, my); lastDist=d; }
+    }, {passive:false});
+    cvs.addEventListener('touchend', e => { if(e.touches.length===0 && !isDrag) place(getP(startP.x, startP.y).x, getP(startP.x, startP.y).y); });
 
     // ЧАТ
     const chatIn = document.getElementById('chat-in'), chatMsgs = document.getElementById('chat-msgs');
-    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:myNick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
+    chatIn.onkeydown = e => { if(e.key==='Enter' && chatIn.value.trim()){ db.ref('chat').push({n:myNick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
     db.ref('chat').limitToLast(6).on('child_added', s => {
         const d = s.val(); const m = document.createElement('div');
         m.className = d.s ? 'msg sys' : 'msg';
         m.innerHTML = d.s ? d.m : `<b>${d.n}:</b> ${d.m}`;
-        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 6000);
+        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 7000);
     });
 
-    function draw() {
+    function render() {
         cvs.width = window.innerWidth; cvs.height = window.innerHeight;
-        ctx.fillStyle = "#e0e0e0"; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
+        
+        // ВЫКЛЮЧАЕМ РАЗМЫТИЕ ПЕРЕД ОТРИСОВКОЙ
+        ctx.imageSmoothingEnabled = false;
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+
+        ctx.fillStyle = "#f0f0f0"; ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.save();
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(zoom, zoom);
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        ctx.restore(); requestAnimationFrame(draw);
+        ctx.restore();
+        requestAnimationFrame(render);
     }
-    draw(); window.oncontextmenu = e => e.preventDefault();
+    render(); window.oncontextmenu = e => e.preventDefault();
 </script>
 </body>
 </html>
