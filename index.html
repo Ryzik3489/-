@@ -3,104 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel</title>
+    <title>World Pixel | Light & Fast</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        /* ПЕРЕМЕННЫЕ ДЛЯ СВЕТЛОЙ ТЕМЫ */
-        :root { 
-            --accent: #007bff; /* Насыщенный синий для акцентов */
-            --bg-panel: rgba(255, 255, 255, 0.95); /* Почти чистый белый */
-            --brd: rgba(0, 0, 0, 0.1); /* Тонкая темная граница */
-            --text-main: #111; /* Почти черный текст */
-            --text-sub: #666; /* Серый текст для подписей */
-        }
-
-        html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; position: fixed; background: #f0f2f5; /* Светло-серый фон за холстом */
-            font-family: -apple-system, system-ui, sans-serif; touch-action: none; 
-        }
+        :root { --accent: #007bff; --bg: rgba(255, 255, 255, 0.98); --text: #111; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e5e5e5; font-family: sans-serif; touch-action: none; }
         canvas { display: block; image-rendering: pixelated; }
 
-        /* ИНТЕРФЕЙС - СВЕТЛЫЙ И ЧИСТЫЙ */
-        #ui-top { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        /* ИНТЕРФЕЙС - БЕЛЫЙ МИНИМАЛИЗМ */
+        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; }
+        .box { background: var(--bg); border: 1px solid #ddd; border-radius: 10px; padding: 8px 12px; color: var(--text); pointer-events: auto; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         
-        .panel { 
-            background: var(--bg-panel); 
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
-            border: 1px solid var(--brd); border-radius: 12px; 
-            padding: 8px 14px; color: var(--text-main); 
-            pointer-events: auto; display: flex; align-items: center; gap: 10px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Легкая тень */
-        }
-        
-        .val { color: var(--text-main); font-weight: 800; font-size: 14px; }
-        .lbl { font-size: 9px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
-        input[type="text"] { background: rgba(0,0,0,0.03); border: 1px solid var(--brd); border-radius: 8px; color: var(--text-main); padding: 5px 8px; width: 80px; outline: none; font-size: 13px; }
-
-        /* КВЕСТЫ */
-        #q-box { position: fixed; top: 65px; right: 10px; width: 180px; flex-direction: column; align-items: flex-start; gap: 5px; }
-        .q-bar { width: 100%; height: 5px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden; margin-top: 3px; }
-        .q-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.3s; box-shadow: 0 0 5px rgba(0,123,255,0.2); }
+        .val { font-weight: 800; font-size: 14px; }
+        .lbl { font-size: 9px; color: #777; text-transform: uppercase; }
 
         /* ЧАТ */
-        #chat-wrap { position: fixed; bottom: 20px; left: 10px; width: 320px; max-width: calc(100vw - 20px); z-index: 100; }
-        
-        #chat-hist { 
-            max-height: 180px; overflow-y: auto; display: none; 
-            background: var(--bg-panel); border-radius: 16px; 
-            padding: 12px; margin-bottom: 10px; border: 1px solid var(--brd);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-        #chat-msgs { display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
-        
-        .msg { 
-            background: #fff; border: 1px solid rgba(0,0,0,0.05); 
-            padding: 8px 12px; border-radius: 10px; color: var(--text-main); 
-            font-size: 13px; width: fit-content; max-width: 90%; 
-            animation: msgIn 0.25s ease-out; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-        .msg b { color: var(--accent); font-weight: 700; }
-        
-        #chat-in { 
-            width: 100%; background: var(--bg-panel); border: 1px solid var(--brd); 
-            padding: 12px 16px; border-radius: 14px; color: var(--text-main); 
-            outline: none; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
-        }
-        #chat-in:focus { border-color: var(--accent); background: #fff; }
+        #chat-wrap { position: fixed; bottom: 15px; left: 10px; width: 280px; max-width: calc(100vw - 20px); z-index: 100; }
+        #chat-msgs { display: flex; flex-direction: column; gap: 4px; pointer-events: none; margin-bottom: 8px; }
+        .msg { background: var(--bg); border: 1px solid #ddd; padding: 6px 10px; border-radius: 8px; color: var(--text); font-size: 12px; width: fit-content; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        #chat-in { width: 100%; background: var(--bg); border: 1px solid #ddd; padding: 12px; border-radius: 12px; color: var(--text); outline: none; box-sizing: border-box; }
 
-        #cd { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; transition: width 0.5s linear; z-index: 1001; }
-        
-        @keyframes msgIn { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        #cd { position: fixed; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; z-index: 101; }
     </style>
 </head>
 <body>
     <div id="cd"></div>
-    <div id="ui-top">
-        <div class="panel">
-            <input type="color" id="cp" value="#007bff" style="width:28px;height:28px;border:none;background:none;padding:0;cursor:pointer;">
-            <div><div class="lbl" id="rank">НОВИЧОК</div><div class="val" id="coords">0, 0</div></div>
+    <div id="ui">
+        <div class="box">
+            <input type="color" id="cp" value="#007bff" style="width:25px;height:25px;border:none;cursor:pointer;">
+            <div><div class="lbl">КООРДИНАТЫ</div><div class="val" id="coords">0, 0</div></div>
         </div>
-        <div class="panel"><div class="lbl">ОНЛАЙН:</div><div class="val" id="online">1</div></div>
-    </div>
-
-    <div id="q-box" class="panel">
-        <div class="lbl" style="color:var(--accent); font-weight:900;">QUEST: PIXEL MASTER</div>
-        <div id="q-txt" style="font-size:12px; font-weight:700;">0/10</div>
-        <div class="q-bar"><div id="q-f" class="q-fill"></div></div>
+        <div class="box"><div class="lbl">ОНЛАЙН:</div><div class="val" id="online">1</div></div>
     </div>
 
     <div id="chat-wrap">
-        <div id="chat-hist"></div>
         <div id="chat-msgs"></div>
-        <input type="text" id="chat-in" placeholder="Написать (Enter)..." maxlength="65">
+        <input type="text" id="chat-in" placeholder="Сообщение..." maxlength="60">
     </div>
 
     <canvas id="cvs"></canvas>
 
 <script>
-    // ТВОЙ КОНФИГ
     const firebaseConfig = {
         apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
         databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com"
@@ -108,119 +52,124 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let pixels = parseInt(localStorage.getItem('wp_px')) || 0;
-    let userName = localStorage.getItem('wp_nick') || "Художник_" + Math.floor(Math.random()*99);
-
-    const chatIn = document.getElementById('chat-in'), chatHist = document.getElementById('chat-hist');
-    function hideChat() { chatHist.style.display = 'none'; chatIn.blur(); }
-    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
-
     const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d', {alpha: false});
     const world = document.createElement('canvas'), wctx = world.getContext('2d', {alpha: false});
     const W_SIZE = 2000; world.width = world.height = W_SIZE;
     wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    let zoom = 5.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, isPan = false, lastDraw = 0;
+    let zoom = 5.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
+    let nick = "User_" + Math.floor(Math.random()*99);
 
+    // СЕТЬ
     db.ref('canvas').on('child_added', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
     db.ref('canvas').on('child_changed', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
     db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
 
-    function doZoom(delta, cx, cy) {
+    // ЛОГИКА ЗУМА
+    function setZoom(delta, cx, cy) {
         const oldZ = zoom;
-        zoom = Math.min(Math.max(zoom * delta, 0.2), 60);
+        zoom = Math.min(Math.max(zoom * delta, 0.1), 80);
         offset.x = cx - (cx - offset.x) * (zoom / oldZ);
         offset.y = cy - (cy - offset.y) * (zoom / oldZ);
     }
-    cvs.addEventListener('wheel', e => { e.preventDefault(); doZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY); }, {passive: false});
 
-    let isDrag = false, lastT = {x:0, y:0}, lastD = 0, startT = {x:0, y:0}, startTime = 0;
+    // МЫШКА
+    cvs.onwheel = e => { e.preventDefault(); setZoom(e.deltaY < 0 ? 1.15 : 0.85, e.clientX, e.clientY); };
+    
+    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false;
     const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
 
-    function place(x, y) {
-        if(Date.now()-lastDraw < 500 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
-        lastDraw = Date.now(); pixels++; localStorage.setItem('wp_px', pixels);
-        db.ref('canvas/'+x+'_'+y).set({x, y, color: document.getElementById('cp').value});
-        const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
-        setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
-        updateUI();
-    }
-
-    canvas.onmousedown = e => { 
-        hideChat(); 
-        if(e.button === 0) {
-            startT = {x: e.clientX, y: e.clientY}; isDrag = false;
-        } else {
-            isPan = true;
-        }
-    };
-    window.onmousemove = e => { 
-        const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = p.x + ", " + p.y;
-        if(isPan){ offset.x += e.movementX; offset.y += e.movementY; }
-        if(Math.hypot(e.clientX - startT.x, e.clientY - startT.y) > 5) isDrag = true;
-    };
-    window.onmouseup = e => { 
-        if(e.button === 0 && !isDrag && chatIn !== document.activeElement) {
-            place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y);
-        }
-        isPan = false; 
+    cvs.onmousedown = e => {
+        if(e.button === 0) { isDrag = false; startP = {x: e.clientX, y: e.clientY}; }
+        else isPan = true;
+        lastP = {x: e.clientX, y: e.clientY};
     };
 
+    window.onmousemove = e => {
+        const p = getP(e.clientX, e.clientY);
+        document.getElementById('coords').innerText = p.x + ", " + p.y;
+        if(isPan || (e.buttons === 1 && isDrag)) {
+            offset.x += e.clientX - lastP.x;
+            offset.y += e.clientY - lastP.y;
+        }
+        if(Math.hypot(e.clientX - startP.x, e.clientY - startP.y) > 5) isDrag = true;
+        lastP = {x: e.clientX, y: e.clientY};
+    };
+
+    window.onmouseup = e => {
+        if(e.button === 0 && !isDrag && document.activeElement !== document.getElementById('chat-in')) {
+            const p = getP(e.clientX, e.clientY);
+            if(Date.now() - lastDraw > 500) {
+                lastDraw = Date.now();
+                db.ref('canvas/'+p.x+'_'+p.y).set({x: p.x, y: p.y, color: document.getElementById('cp').value});
+                const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
+                setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
+            }
+        }
+        isPan = false; isDrag = false;
+    };
+
+    // ТАЧИ (ИСПРАВЛЕННЫЙ ПИНЧ-ЗУМ)
+    let lastDist = 0;
     cvs.addEventListener('touchstart', e => {
-        hideChat(); startTime = Date.now(); isDrag = false;
+        isDrag = false;
         if(e.touches.length === 1) {
-            startT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            lastT = {...startT}; isPan = true;
+            startP = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            lastP = {...startP};
         } else if(e.touches.length === 2) {
-            isPan = false;
-            lastD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        }
-    });
-
-    window.addEventListener('touchmove', e => {
-        if(e.target === cvs) e.preventDefault();
-        if(e.touches.length === 1 && isPan) {
-            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y;
-            lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            if(Math.hypot(lastT.x - startT.x, lastT.y - startT.y) > 10) isDrag = true;
-        } else if(e.touches.length === 2) {
-            const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            doZoom(d / lastD, (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
-            lastD = d; isDrag = true;
+            lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         }
     }, {passive: false});
 
-    window.addEventListener('touchend', e => {
-        if(e.touches.length === 0 && isPan && !isDrag && Date.now() - startTime < 180) {
-            const p = getP(startT.x, startT.y); place(p.x, p.y);
+    cvs.addEventListener('touchmove', e => {
+        e.preventDefault();
+        if(e.touches.length === 1) {
+            offset.x += e.touches[0].clientX - lastP.x;
+            offset.y += e.touches[0].clientY - lastP.y;
+            if(Math.hypot(e.touches[0].clientX - startP.x, e.touches[0].clientY - startP.y) > 10) isDrag = true;
+            lastP = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        } else if(e.touches.length === 2) {
+            isDrag = true;
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            setZoom(dist / lastDist, midX, midY);
+            lastDist = dist;
         }
-        isPan = false;
+    }, {passive: false});
+
+    cvs.addEventListener('touchend', e => {
+        if(e.touches.length === 0 && !isDrag) {
+            const p = getP(startP.x, startP.y);
+            if(Date.now() - lastDraw > 500) {
+                lastDraw = Date.now();
+                db.ref('canvas/'+p.x+'_'+p.y).set({x: p.x, y: p.y, color: document.getElementById('cp').value});
+                const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
+                setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
+            }
+        }
     });
 
-    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:userName, m:chatIn.value.trim()}); chatIn.value=''; hideChat(); }};
-    db.ref('chat').limitToLast(12).on('child_added', s => {
+    // ЧАТ
+    const chatIn = document.getElementById('chat-in'), chatMsgs = document.getElementById('chat-msgs');
+    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:nick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
+    db.ref('chat').limitToLast(5).on('child_added', s => {
         const d = s.val(); const m = document.createElement('div'); m.className = 'msg';
-        m.innerHTML = d.n ? `<b>${d.n}:</b> ${d.m}` : d.m;
-        document.getElementById('chat-msgs').appendChild(m); setTimeout(()=>m.remove(), 8000);
-        const h = document.createElement('div'); h.innerHTML = m.innerHTML; h.style.padding="5px 0"; chatHist.appendChild(h);
-        chatHist.scrollTop = chatHist.scrollHeight;
+        m.innerHTML = `<b>${d.n}:</b> ${d.m}`;
+        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 5000);
     });
-
-    function updateUI() {
-        document.getElementById('q-f').style.width = Math.min(pixels*10, 100) + "%";
-        document.getElementById('q-txt').innerText = Math.min(pixels, 10) + "/10";
-        if(pixels > 50) document.getElementById('rank').innerText = "ХУДОЖНИК";
-    }
 
     function draw() {
-        cvs.width = window.innerWidth; cvs.height = window.innerHeight; ctx.imageSmoothingEnabled=false;
-        ctx.fillStyle = "#f0f2f5"; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
-        ctx.shadowColor = "rgba(0,0,0,0.1)"; ctx.shadowBlur = 20 / zoom; // Тень холста
+        cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+        ctx.fillStyle = "#e5e5e5"; ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.save();
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(zoom, zoom);
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        ctx.restore(); requestAnimationFrame(draw);
+        ctx.restore();
+        requestAnimationFrame(draw);
     }
-    updateUI(); draw(); window.oncontextmenu = e => e.preventDefault();
+    draw(); window.oncontextmenu = e => e.preventDefault();
 </script>
 </body>
 </html>
