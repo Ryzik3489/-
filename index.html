@@ -3,199 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel | Telega Server</title>
+    <title>World Pixel</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { --accent: #00d2ff; --bg-glass: rgba(10, 15, 25, 0.85); --border: rgba(255, 255, 255, 0.1); }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #05080a; font-family: 'Segoe UI', system-ui, sans-serif; touch-action: none; -webkit-user-select: none; }
+        /* ПЕРЕМЕННЫЕ ДЛЯ СВЕТЛОЙ ТЕМЫ */
+        :root { 
+            --accent: #007bff; /* Насыщенный синий для акцентов */
+            --bg-panel: rgba(255, 255, 255, 0.95); /* Почти чистый белый */
+            --brd: rgba(0, 0, 0, 0.1); /* Тонкая темная граница */
+            --text-main: #111; /* Почти черный текст */
+            --text-sub: #666; /* Серый текст для подписей */
+        }
+
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; position: fixed; background: #f0f2f5; /* Светло-серый фон за холстом */
+            font-family: -apple-system, system-ui, sans-serif; touch-action: none; 
+        }
         canvas { display: block; image-rendering: pixelated; }
 
-        /* PREMIUM INTERFACE */
-        #ui-top { position: fixed; top: 12px; left: 12px; right: 12px; pointer-events: none; z-index: 1000; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
-        .glass { background: var(--bg-glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border); border-radius: 14px; padding: 8px 14px; pointer-events: auto; color: white; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; }
+        /* ИНТЕРФЕЙС - СВЕТЛЫЙ И ЧИСТЫЙ */
+        #ui-top { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
         
-        .stat-v { font-size: 13px; font-weight: 800; color: var(--accent); text-shadow: 0 0 10px rgba(0,210,255,0.3); }
-        .label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: bold; }
+        .panel { 
+            background: var(--bg-panel); 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
+            border: 1px solid var(--brd); border-radius: 12px; 
+            padding: 8px 14px; color: var(--text-main); 
+            pointer-events: auto; display: flex; align-items: center; gap: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Легкая тень */
+        }
+        
+        .val { color: var(--text-main); font-weight: 800; font-size: 14px; }
+        .lbl { font-size: 9px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
+        input[type="text"] { background: rgba(0,0,0,0.03); border: 1px solid var(--brd); border-radius: 8px; color: var(--text-main); padding: 5px 8px; width: 80px; outline: none; font-size: 13px; }
 
-        #nick-input { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white; padding: 5px 8px; width: 85px; outline: none; font-size: 12px; transition: 0.3s; }
-        #nick-input:focus { border-color: var(--accent); background: rgba(0,210,255,0.1); }
+        /* КВЕСТЫ */
+        #q-box { position: fixed; top: 65px; right: 10px; width: 180px; flex-direction: column; align-items: flex-start; gap: 5px; }
+        .q-bar { width: 100%; height: 5px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden; margin-top: 3px; }
+        .q-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.3s; box-shadow: 0 0 5px rgba(0,123,255,0.2); }
 
-        /* QUESTS WINDOW */
-        #quests { position: fixed; top: 75px; right: 12px; width: 180px; flex-direction: column; align-items: flex-start; gap: 8px; }
-        .q-row { font-size: 11px; width: 100%; display: flex; justify-content: space-between; margin-bottom: 2px; font-weight: 600; }
-        .bar { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-        .fill { height: 100%; background: linear-gradient(90deg, #00d2ff, #0080ff); width: 0%; transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 0 8px var(--accent); }
+        /* ЧАТ */
+        #chat-wrap { position: fixed; bottom: 20px; left: 10px; width: 320px; max-width: calc(100vw - 20px); z-index: 100; }
+        
+        #chat-hist { 
+            max-height: 180px; overflow-y: auto; display: none; 
+            background: var(--bg-panel); border-radius: 16px; 
+            padding: 12px; margin-bottom: 10px; border: 1px solid var(--brd);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        #chat-msgs { display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+        
+        .msg { 
+            background: #fff; border: 1px solid rgba(0,0,0,0.05); 
+            padding: 8px 12px; border-radius: 10px; color: var(--text-main); 
+            font-size: 13px; width: fit-content; max-width: 90%; 
+            animation: msgIn 0.25s ease-out; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .msg b { color: var(--accent); font-weight: 700; }
+        
+        #chat-in { 
+            width: 100%; background: var(--bg-panel); border: 1px solid var(--brd); 
+            padding: 12px 16px; border-radius: 14px; color: var(--text-main); 
+            outline: none; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+        }
+        #chat-in:focus { border-color: var(--accent); background: #fff; }
 
-        /* MODERN CHAT */
-        #chat-box { position: fixed; bottom: 22px; left: 12px; width: 330px; max-width: calc(100vw - 24px); z-index: 1000; }
-        #chat-history { max-height: 180px; overflow-y: auto; display: none; background: var(--bg-glass); border-radius: 16px; border: 1px solid var(--border); padding: 12px; margin-bottom: 12px; }
-        #chat-msgs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; pointer-events: none; }
-        .bubble { background: var(--bg-glass); border: 1px solid var(--border); padding: 8px 14px; border-radius: 12px; color: white; font-size: 13px; animation: msgIn 0.3s ease-out; width: fit-content; max-width: 95%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .bubble b { color: var(--accent); }
-        .sys { border-left: 4px solid #00ffcc; color: #00ffcc; font-size: 11px; background: rgba(0,255,204,0.05); }
-        #chat-in { width: 100%; background: var(--bg-glass); border: 1px solid var(--border); padding: 12px 16px; border-radius: 15px; color: white; outline: none; box-sizing: border-box; transition: 0.3s; }
-        #chat-in:focus { border-color: var(--accent); box-shadow: 0 0 20px rgba(0,210,255,0.15); }
-
-        #cd-bar { position: fixed; bottom: 0; left: 0; height: 4px; background: linear-gradient(90deg, #00d2ff, #00ffcc); width: 0%; z-index: 1001; }
-        @keyframes msgIn { from { opacity: 0; transform: translateY(15px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        #cd { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; transition: width 0.5s linear; z-index: 1001; }
+        
+        @keyframes msgIn { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
     </style>
 </head>
 <body>
-    <div id="cd-bar"></div>
+    <div id="cd"></div>
     <div id="ui-top">
-        <div class="glass">
-            <input type="color" id="colorPicker" value="#00d2ff" style="width:30px;height:30px;border:none;background:none;padding:0;cursor:pointer;">
-            <div><div class="label" id="rank-name">НОВИЧОК</div><div class="stat-v" id="coords">0, 0</div></div>
+        <div class="panel">
+            <input type="color" id="cp" value="#007bff" style="width:28px;height:28px;border:none;background:none;padding:0;cursor:pointer;">
+            <div><div class="lbl" id="rank">НОВИЧОК</div><div class="val" id="coords">0, 0</div></div>
         </div>
-        <div class="glass"><div class="label">ИГРОК:</div><input type="text" id="nick-input" maxlength="12"></div>
-        <div class="glass"><div class="label">ОНЛАЙН:</div><div class="stat-v" id="online">1</div></div>
+        <div class="panel"><div class="lbl">ОНЛАЙН:</div><div class="val" id="online">1</div></div>
     </div>
 
-    <div id="quests" class="glass">
-        <div style="font-size: 10px; color: var(--accent); font-weight: 900; letter-spacing: 1px;">ACTIVE QUESTS</div>
-        <div style="width:100%">
-            <div class="q-row"><span>Pixel Master</span><span id="q1-v">0/10</span></div>
-            <div class="bar"><div id="q1-f" class="fill"></div></div>
-        </div>
+    <div id="q-box" class="panel">
+        <div class="lbl" style="color:var(--accent); font-weight:900;">QUEST: PIXEL MASTER</div>
+        <div id="q-txt" style="font-size:12px; font-weight:700;">0/10</div>
+        <div class="q-bar"><div id="q-f" class="q-fill"></div></div>
     </div>
 
-    <div id="chat-box">
-        <div id="chat-history"></div>
+    <div id="chat-wrap">
+        <div id="chat-hist"></div>
         <div id="chat-msgs"></div>
-        <input type="text" id="chat-in" placeholder="Напиши что-нибудь..." maxlength="65">
+        <input type="text" id="chat-in" placeholder="Написать (Enter)..." maxlength="65">
     </div>
 
-    <canvas id="canvas"></canvas>
+    <canvas id="cvs"></canvas>
 
 <script>
-    // ТВОЙ НОВЫЙ ПРОЕКТ: telega-85cca
+    // ТВОЙ КОНФИГ
     const firebaseConfig = {
         apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
-        authDomain: "telega-85cca.firebaseapp.com",
-        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com",
-        projectId: "telega-85cca",
-        storageBucket: "telega-85cca.firebasestorage.app",
-        messagingSenderId: "213088586635",
-        appId: "1:213088586635:web:5ee9a8985a9fb5403f7d8e"
+        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let pixels = parseInt(localStorage.getItem('wp_pixels_telega')) || 0;
-    let userName = localStorage.getItem('worldpixel_name') || "Художник_" + Math.floor(Math.random()*999);
-    
-    const nickIn = document.getElementById('nick-input');
-    nickIn.value = userName;
-    nickIn.onchange = (e) => { 
-        userName = e.target.value.trim() || "Аноним"; 
-        localStorage.setItem('worldpixel_name', userName);
-    };
+    let pixels = parseInt(localStorage.getItem('wp_px')) || 0;
+    let userName = localStorage.getItem('wp_nick') || "Художник_" + Math.floor(Math.random()*99);
 
-    function updateUI() {
-        let r = "Новичок"; if(pixels > 50) r = "Художник"; if(pixels > 200) r = "Мастер"; if(pixels > 1000) r = "Легенда";
-        document.getElementById('rank-name').innerText = r;
-        document.getElementById('q1-f').style.width = Math.min((pixels/10)*100, 100) + "%";
-        document.getElementById('q1-v').innerText = Math.min(pixels, 10) + "/10";
-    }
+    const chatIn = document.getElementById('chat-in'), chatHist = document.getElementById('chat-hist');
+    function hideChat() { chatHist.style.display = 'none'; chatIn.blur(); }
+    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
 
-    // СИСТЕМА ПРИСУТСТВИЯ
-    const myRef = db.ref('presence').push();
-    db.ref('.info/connected').on('value', s => {
-        if(s.val()){
-            myRef.set({ name: userName });
-            myRef.onDisconnect().remove();
-            db.ref('chat').push({ system: true, msg: `✨ ${userName} вошел на сервер!` });
-        }
-    });
-    db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
-
-    // ХОЛСТ (ОПТИМИЗИРОВАННЫЙ)
-    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d', { alpha: false });
-    const world = document.createElement('canvas'), wctx = world.getContext('2d', { alpha: false });
-    const W_SIZE = 2000; world.width = world.height = W_SIZE; 
+    const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d', {alpha: false});
+    const world = document.createElement('canvas'), wctx = world.getContext('2d', {alpha: false});
+    const W_SIZE = 2000; world.width = world.height = W_SIZE;
     wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    let zoom = 8.0, offset = { x: window.innerWidth/2, y: window.innerHeight/2 }, isPan = false, lastDraw = 0;
+    let zoom = 5.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, isPan = false, lastDraw = 0;
 
     db.ref('canvas').on('child_added', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
     db.ref('canvas').on('child_changed', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
+    db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
 
-    // ЧАТ
-    const chatIn = document.getElementById('chat-in'), chatHist = document.getElementById('chat-history'), chatMsgs = document.getElementById('chat-msgs');
-    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
-    chatIn.onkeydown = e => {
-        if (e.key === 'Enter' && chatIn.value.trim()) {
-            db.ref('chat').push({ name: userName, msg: chatIn.value.trim(), rank: document.getElementById('rank-name').innerText, t: Date.now() });
-            chatIn.value = '';
-        }
-    };
+    function doZoom(delta, cx, cy) {
+        const oldZ = zoom;
+        zoom = Math.min(Math.max(zoom * delta, 0.2), 60);
+        offset.x = cx - (cx - offset.x) * (zoom / oldZ);
+        offset.y = cy - (cy - offset.y) * (zoom / oldZ);
+    }
+    cvs.addEventListener('wheel', e => { e.preventDefault(); doZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY); }, {passive: false});
 
-    db.ref('chat').limitToLast(15).on('child_added', s => {
-        const d = s.val();
-        const m = document.createElement('div');
-        m.className = d.system ? 'bubble sys' : 'bubble';
-        m.innerHTML = d.system ? d.msg : `<b>${d.name}:</b> ${d.msg}`;
-        if(!d.system){
-            const h = document.createElement('div'); 
-            h.innerHTML = `<span style="font-size:9px; opacity:0.5; margin-right:5px;">[${d.rank || 'Новичок'}]</span>` + m.innerHTML;
-            h.style.padding="6px 0"; h.style.borderBottom="1px solid rgba(255,255,255,0.05)";
-            chatHist.appendChild(h); chatHist.scrollTop = chatHist.scrollHeight;
-        }
-        chatMsgs.appendChild(m); setTimeout(() => m.remove(), 8000);
-    });
+    let isDrag = false, lastT = {x:0, y:0}, lastD = 0, startT = {x:0, y:0}, startTime = 0;
+    const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
 
-    // УПРАВЛЕНИЕ
-    function getP(cx, cy) { return { x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) }; }
-    function send(x, y) {
+    function place(x, y) {
         if(Date.now()-lastDraw < 500 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
-        lastDraw = Date.now(); pixels++; localStorage.setItem('wp_pixels_telega', pixels); updateUI();
-        db.ref('canvas/'+x+'_'+y).set({x, y, color: document.getElementById('colorPicker').value});
-        const b = document.getElementById('cd-bar'); b.style.transition='none'; b.style.width='100%';
+        lastDraw = Date.now(); pixels++; localStorage.setItem('wp_px', pixels);
+        db.ref('canvas/'+x+'_'+y).set({x, y, color: document.getElementById('cp').value});
+        const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
         setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
+        updateUI();
     }
 
-    window.oncontextmenu = e => e.preventDefault();
-    canvas.onmousedown = e => { if(chatIn !== document.activeElement) { if(e.button===0) send(getP(e.clientX,e.clientY).x, getP(e.clientX,e.clientY).y); else isPan=true; } };
-    window.onmousemove = e => { 
-        const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = `${p.x}, ${p.y}`;
-        if(isPan){ offset.x+=e.movementX; offset.y+=e.movementY; } 
+    canvas.onmousedown = e => { 
+        hideChat(); 
+        if(e.button === 0) {
+            startT = {x: e.clientX, y: e.clientY}; isDrag = false;
+        } else {
+            isPan = true;
+        }
     };
-    window.onmouseup = () => isPan=false;
-    window.onwheel = e => { 
-        if(chatHist.style.display === 'block') return;
-        const oldZ = zoom; zoom *= (e.deltaY < 0 ? 1.15 : 0.85); zoom = Math.max(0.1, Math.min(80, zoom)); 
-        offset.x = e.clientX - (e.clientX - offset.x) * (zoom/oldZ); offset.y = e.clientY - (e.clientY - offset.y) * (zoom/oldZ); 
+    window.onmousemove = e => { 
+        const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = p.x + ", " + p.y;
+        if(isPan){ offset.x += e.movementX; offset.y += e.movementY; }
+        if(Math.hypot(e.clientX - startT.x, e.clientY - startT.y) > 5) isDrag = true;
+    };
+    window.onmouseup = e => { 
+        if(e.button === 0 && !isDrag && chatIn !== document.activeElement) {
+            place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y);
+        }
+        isPan = false; 
     };
 
-    // МОБИЛЬНОЕ УПРАВЛЕНИЕ (ВКЛЮЧЕНО)
-    let lastT = {x:0,y:0}, lastD = 0;
-    canvas.addEventListener('touchstart', e => {
-        if(e.touches.length === 1) { lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY}; isPan = true; }
-        else if(e.touches.length === 2) { lastD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+    cvs.addEventListener('touchstart', e => {
+        hideChat(); startTime = Date.now(); isDrag = false;
+        if(e.touches.length === 1) {
+            startT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            lastT = {...startT}; isPan = true;
+        } else if(e.touches.length === 2) {
+            isPan = false;
+            lastD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        }
     });
+
     window.addEventListener('touchmove', e => {
-        if(e.target === canvas) e.preventDefault();
-        if(e.touches.length === 1 && isPan) { 
-            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y; 
-            lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY}; 
+        if(e.target === cvs) e.preventDefault();
+        if(e.touches.length === 1 && isPan) {
+            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y;
+            lastT = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            if(Math.hypot(lastT.x - startT.x, lastT.y - startT.y) > 10) isDrag = true;
         } else if(e.touches.length === 2) {
             const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            const oldZ = zoom; zoom *= (d / lastD); zoom = Math.max(0.1, Math.min(80, zoom));
-            const midX = (e.touches[0].clientX + e.touches[1].clientX)/2, midY = (e.touches[0].clientY + e.touches[1].clientY)/2;
-            offset.x = midX - (midX - offset.x) * (zoom/oldZ); offset.y = midY - (midY - offset.y) * (zoom/oldZ);
-            lastD = d;
+            doZoom(d / lastD, (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
+            lastD = d; isDrag = true;
         }
     }, {passive: false});
 
-    function render() {
-        canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false;
-        ctx.fillStyle="#05080a"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    window.addEventListener('touchend', e => {
+        if(e.touches.length === 0 && isPan && !isDrag && Date.now() - startTime < 180) {
+            const p = getP(startT.x, startT.y); place(p.x, p.y);
+        }
+        isPan = false;
+    });
+
+    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:userName, m:chatIn.value.trim()}); chatIn.value=''; hideChat(); }};
+    db.ref('chat').limitToLast(12).on('child_added', s => {
+        const d = s.val(); const m = document.createElement('div'); m.className = 'msg';
+        m.innerHTML = d.n ? `<b>${d.n}:</b> ${d.m}` : d.m;
+        document.getElementById('chat-msgs').appendChild(m); setTimeout(()=>m.remove(), 8000);
+        const h = document.createElement('div'); h.innerHTML = m.innerHTML; h.style.padding="5px 0"; chatHist.appendChild(h);
+        chatHist.scrollTop = chatHist.scrollHeight;
+    });
+
+    function updateUI() {
+        document.getElementById('q-f').style.width = Math.min(pixels*10, 100) + "%";
+        document.getElementById('q-txt').innerText = Math.min(pixels, 10) + "/10";
+        if(pixels > 50) document.getElementById('rank').innerText = "ХУДОЖНИК";
+    }
+
+    function draw() {
+        cvs.width = window.innerWidth; cvs.height = window.innerHeight; ctx.imageSmoothingEnabled=false;
+        ctx.fillStyle = "#f0f2f5"; ctx.fillRect(0,0,cvs.width,cvs.height);
         ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
+        ctx.shadowColor = "rgba(0,0,0,0.1)"; ctx.shadowBlur = 20 / zoom; // Тень холста
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        ctx.restore(); requestAnimationFrame(render);
-    } 
-    updateUI(); render();
+        ctx.restore(); requestAnimationFrame(draw);
+    }
+    updateUI(); draw(); window.oncontextmenu = e => e.preventDefault();
 </script>
 </body>
 </html>
