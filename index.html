@@ -3,26 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel | Light & Fast</title>
+    <title>World Pixel | Final Clear</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { --accent: #007bff; --bg: rgba(255, 255, 255, 0.98); --text: #111; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e5e5e5; font-family: sans-serif; touch-action: none; }
-        canvas { display: block; image-rendering: pixelated; }
-
-        /* ИНТЕРФЕЙС - БЕЛЫЙ МИНИМАЛИЗМ */
-        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; }
-        .box { background: var(--bg); border: 1px solid #ddd; border-radius: 10px; padding: 8px 12px; color: var(--text); pointer-events: auto; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        :root { --accent: #007bff; --bg: white; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e0e0e0; font-family: sans-serif; touch-action: none; }
         
-        .val { font-weight: 800; font-size: 14px; }
-        .lbl { font-size: 9px; color: #777; text-transform: uppercase; }
+        /* ЧЕТКОСТЬ ПИКСЕЛЕЙ */
+        canvas { 
+            display: block; 
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: -o-crisp-edges;
+            image-rendering: pixelated; /* ВОТ ЭТО ДЕЛАЕТ РИСУНОК ЧЕТКИМ */
+            -ms-interpolation-mode: nearest-neighbor;
+        }
 
-        /* ЧАТ */
-        #chat-wrap { position: fixed; bottom: 15px; left: 10px; width: 280px; max-width: calc(100vw - 20px); z-index: 100; }
-        #chat-msgs { display: flex; flex-direction: column; gap: 4px; pointer-events: none; margin-bottom: 8px; }
-        .msg { background: var(--bg); border: 1px solid #ddd; padding: 6px 10px; border-radius: 8px; color: var(--text); font-size: 12px; width: fit-content; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        #chat-in { width: 100%; background: var(--bg); border: 1px solid #ddd; padding: 12px; border-radius: 12px; color: var(--text); outline: none; box-sizing: border-box; }
+        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; gap: 5px; }
+        .box { background: var(--bg); border: 1px solid #ccc; border-radius: 8px; padding: 5px 10px; color: #111; pointer-events: auto; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        
+        input[type="text"] { border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; width: 80px; font-size: 12px; outline: none; }
+        .val { font-weight: 800; font-size: 13px; }
+        .lbl { font-size: 8px; color: #888; text-transform: uppercase; }
+
+        #chat-wrap { position: fixed; bottom: 15px; left: 10px; width: 260px; pointer-events: none; z-index: 100; }
+        #chat-msgs { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+        .msg { background: white; border: 1px solid #ddd; padding: 5px 10px; border-radius: 6px; color: #111; font-size: 12px; width: fit-content; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sys { border-left: 3px solid #00ff88; color: #00aa66; font-size: 11px; font-style: italic; }
+        #chat-in { width: 100%; background: white; border: 1px solid #ccc; padding: 10px; border-radius: 10px; color: #111; outline: none; pointer-events: auto; box-sizing: border-box; }
 
         #cd { position: fixed; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 0%; z-index: 101; }
     </style>
@@ -31,15 +41,20 @@
     <div id="cd"></div>
     <div id="ui">
         <div class="box">
-            <input type="color" id="cp" value="#007bff" style="width:25px;height:25px;border:none;cursor:pointer;">
-            <div><div class="lbl">КООРДИНАТЫ</div><div class="val" id="coords">0, 0</div></div>
+            <input type="color" id="cp" value="#007bff" style="width:22px;height:22px;border:none;padding:0;">
+            <input type="text" id="nick-in" placeholder="Твой ник" maxlength="12">
         </div>
-        <div class="box"><div class="lbl">ОНЛАЙН:</div><div class="val" id="online">1</div></div>
+        <div class="box">
+            <div style="text-align:right">
+                <div class="lbl">ОНЛАЙН: <span class="val" id="online">1</span></div>
+                <div class="val" id="coords" style="font-size:10px">0, 0</div>
+            </div>
+        </div>
     </div>
 
     <div id="chat-wrap">
         <div id="chat-msgs"></div>
-        <input type="text" id="chat-in" placeholder="Сообщение..." maxlength="60">
+        <input type="text" id="chat-in" placeholder="Нажми Enter для чата...">
     </div>
 
     <canvas id="cvs"></canvas>
@@ -52,122 +67,115 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let myNick = localStorage.getItem('wp_n') || "Игрок" + Math.floor(Math.random()*99);
+    document.getElementById('nick-in').value = myNick;
+    document.getElementById('nick-in').onchange = (e) => { myNick = e.target.value; localStorage.setItem('wp_n', myNick); };
+
     const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d', {alpha: false});
     const world = document.createElement('canvas'), wctx = world.getContext('2d', {alpha: false});
     const W_SIZE = 2000; world.width = world.height = W_SIZE;
     wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    let zoom = 5.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
-    let nick = "User_" + Math.floor(Math.random()*99);
+    let zoom = 10.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
 
-    // СЕТЬ
-    db.ref('canvas').on('child_added', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
-    db.ref('canvas').on('child_changed', s => { const p = s.val(); if(p){ wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); }});
+    // СЕТЬ И ВХОД/ВЫХОД
+    const myStatusRef = db.ref('presence').push();
+    db.ref('.info/connected').on('value', s => {
+        if(s.val()){
+            myStatusRef.set({ n: myNick });
+            myStatusRef.onDisconnect().remove();
+            db.ref('chat').push({ s: true, m: `➡️ ${myNick} зашел` });
+        }
+    });
+
+    db.ref('presence').on('child_removed', s => {
+        const u = s.val();
+        if(u) db.ref('chat').push({ s: true, m: `⬅️ ${u.n} вышел` });
+    });
+
+    db.ref('canvas').on('child_added', s => { const p = s.val(); if(p){ wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }});
+    db.ref('canvas').on('child_changed', s => { const p = s.val(); if(p){ wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }});
     db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
 
-    // ЛОГИКА ЗУМА
-    function setZoom(delta, cx, cy) {
-        const oldZ = zoom;
-        zoom = Math.min(Math.max(zoom * delta, 0.1), 80);
-        offset.x = cx - (cx - offset.x) * (zoom / oldZ);
-        offset.y = cy - (cy - offset.y) * (zoom / oldZ);
+    // УПРАВЛЕНИЕ
+    const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
+    
+    function setZoom(d, cx, cy) {
+        const oldZ = zoom; zoom = Math.min(Math.max(zoom * d, 0.5), 100);
+        offset.x = cx - (cx - offset.x) * (zoom / oldZ); offset.y = cy - (cy - offset.y) * (zoom / oldZ);
     }
 
-    // МЫШКА
-    cvs.onwheel = e => { e.preventDefault(); setZoom(e.deltaY < 0 ? 1.15 : 0.85, e.clientX, e.clientY); };
-    
-    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false;
-    const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
+    cvs.onwheel = e => { e.preventDefault(); setZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY); };
 
-    cvs.onmousedown = e => {
+    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false, startTime = 0;
+
+    function place(x, y) {
+        if(Date.now() - lastDraw < 500 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
+        lastDraw = Date.now();
+        db.ref('canvas/'+x+'_'+y).set({x, y, c: document.getElementById('cp').value});
+        const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
+        setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
+    }
+
+    cvs.onmousedown = e => { 
         if(e.button === 0) { isDrag = false; startP = {x: e.clientX, y: e.clientY}; }
-        else isPan = true;
-        lastP = {x: e.clientX, y: e.clientY};
+        else isPan = true; lastP = {x: e.clientX, y: e.clientY};
     };
 
     window.onmousemove = e => {
-        const p = getP(e.clientX, e.clientY);
-        document.getElementById('coords').innerText = p.x + ", " + p.y;
-        if(isPan || (e.buttons === 1 && isDrag)) {
-            offset.x += e.clientX - lastP.x;
-            offset.y += e.clientY - lastP.y;
-        }
-        if(Math.hypot(e.clientX - startP.x, e.clientY - startP.y) > 5) isDrag = true;
+        const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = p.x + ", " + p.y;
+        if(isPan || (e.buttons === 1 && isDrag)) { offset.x += e.clientX - lastP.x; offset.y += e.clientY - lastP.y; }
+        if(Math.hypot(e.clientX - startP.x, e.clientY - startP.y) > 8) isDrag = true;
         lastP = {x: e.clientX, y: e.clientY};
     };
 
     window.onmouseup = e => {
-        if(e.button === 0 && !isDrag && document.activeElement !== document.getElementById('chat-in')) {
-            const p = getP(e.clientX, e.clientY);
-            if(Date.now() - lastDraw > 500) {
-                lastDraw = Date.now();
-                db.ref('canvas/'+p.x+'_'+p.y).set({x: p.x, y: p.y, color: document.getElementById('cp').value});
-                const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
-                setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
-            }
-        }
-        isPan = false; isDrag = false;
+        if(e.button === 0 && !isDrag && document.activeElement.tagName !== 'INPUT') place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y);
+        isPan = false;
     };
 
-    // ТАЧИ (ИСПРАВЛЕННЫЙ ПИНЧ-ЗУМ)
+    // ТАЧИ (МОБИЛКА)
     let lastDist = 0;
     cvs.addEventListener('touchstart', e => {
-        isDrag = false;
-        if(e.touches.length === 1) {
-            startP = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            lastP = {...startP};
-        } else if(e.touches.length === 2) {
-            lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        }
-    }, {passive: false});
+        startTime = Date.now(); isDrag = false;
+        if(e.touches.length === 1) { startP = {x: e.touches[0].clientX, y: e.touches[0].clientY}; lastP = {...startP}; }
+        else if(e.touches.length === 2) { lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+    });
 
     cvs.addEventListener('touchmove', e => {
         e.preventDefault();
         if(e.touches.length === 1) {
-            offset.x += e.touches[0].clientX - lastP.x;
-            offset.y += e.touches[0].clientY - lastP.y;
+            offset.x += e.touches[0].clientX - lastP.x; offset.y += e.touches[0].clientY - lastP.y;
             if(Math.hypot(e.touches[0].clientX - startP.x, e.touches[0].clientY - startP.y) > 10) isDrag = true;
             lastP = {x: e.touches[0].clientX, y: e.touches[0].clientY};
         } else if(e.touches.length === 2) {
             isDrag = true;
-            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            setZoom(dist / lastDist, midX, midY);
-            lastDist = dist;
+            const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            setZoom(d / lastDist, (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
+            lastDist = d;
         }
     }, {passive: false});
 
     cvs.addEventListener('touchend', e => {
-        if(e.touches.length === 0 && !isDrag) {
-            const p = getP(startP.x, startP.y);
-            if(Date.now() - lastDraw > 500) {
-                lastDraw = Date.now();
-                db.ref('canvas/'+p.x+'_'+p.y).set({x: p.x, y: p.y, color: document.getElementById('cp').value});
-                const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
-                setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
-            }
-        }
+        if(e.touches.length === 0 && !isDrag && Date.now() - startTime < 200) place(getP(startP.x, startP.y).x, getP(startP.x, startP.y).y);
     });
 
     // ЧАТ
     const chatIn = document.getElementById('chat-in'), chatMsgs = document.getElementById('chat-msgs');
-    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:nick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
-    db.ref('chat').limitToLast(5).on('child_added', s => {
-        const d = s.val(); const m = document.createElement('div'); m.className = 'msg';
-        m.innerHTML = `<b>${d.n}:</b> ${d.m}`;
-        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 5000);
+    chatIn.onkeydown = e => { if(e.key === 'Enter' && chatIn.value.trim()){ db.ref('chat').push({n:myNick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
+    db.ref('chat').limitToLast(6).on('child_added', s => {
+        const d = s.val(); const m = document.createElement('div');
+        m.className = d.s ? 'msg sys' : 'msg';
+        m.innerHTML = d.s ? d.m : `<b>${d.n}:</b> ${d.m}`;
+        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 6000);
     });
 
     function draw() {
         cvs.width = window.innerWidth; cvs.height = window.innerHeight;
-        ctx.fillStyle = "#e5e5e5"; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.save();
-        ctx.translate(offset.x, offset.y);
-        ctx.scale(zoom, zoom);
+        ctx.fillStyle = "#e0e0e0"; ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        ctx.restore();
-        requestAnimationFrame(draw);
+        ctx.restore(); requestAnimationFrame(draw);
     }
     draw(); window.oncontextmenu = e => e.preventDefault();
 </script>
