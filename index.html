@@ -26,34 +26,25 @@
         input[type="color"] { width: 35px; height: 35px; border: none; background: none; cursor: pointer; padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; }
 
-        /* НОВЫЙ ЧАТ С ИСТОРИЕЙ */
+        /* ЧАТ С ИСТОРИЕЙ */
         #chat-container { position: fixed; bottom: 25px; left: 15px; width: 300px; pointer-events: auto; z-index: 1000; display: flex; flex-direction: column; }
-        
         #chat-history { 
             max-height: 250px; overflow-y: auto; background: rgba(255,255,255,0.95); 
             border-radius: 12px; margin-bottom: 10px; padding: 12px; display: none;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(0,0,0,0.1);
-            scrollbar-width: thin;
         }
-
         #chat-messages { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; pointer-events: none; }
-        
         .msg-history { font-size: 13px; margin-bottom: 6px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 4px; color: #222; word-wrap: break-word; }
         .msg-history b { color: #4285F4; }
-
-        /* Всплывашки */
         .msg { 
             background: rgba(255,255,255,0.9); padding: 6px 12px; border-radius: 10px; 
             font-size: 13px; border-left: 4px solid #4285F4; animation: fO 9s forwards; 
             width: fit-content; box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: #333;
         }
-
         #chat-input { 
             width: 100%; background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); 
             padding: 12px; border-radius: 12px; outline: none; font-size: 14px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         #cooldown { position: fixed; bottom: 0; left: 0; height: 4px; background: #4285F4; width: 0%; z-index: 1001; }
         @keyframes fO { 0%, 85% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(-20px); } }
     </style>
@@ -77,12 +68,18 @@
     <canvas id="canvas"></canvas>
 
 <script>
-    // КОНФИГУРАЦИЯ FIREBASE
-    const config = { 
-        apiKey: "AIzaSyCWfc3TzdVLaiwOhUrEfDaGsEHrUInzuJM", 
-        databaseURL: "https://doodle-102-default-rtdb.firebaseio.com" 
+    // ТВОЙ НОВЫЙ КОНФИГ (ИСПРАВЛЕННЫЙ)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
+        authDomain: "telega-85cca.firebaseapp.com",
+        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com",
+        projectId: "telega-85cca",
+        storageBucket: "telega-85cca.firebasestorage.app",
+        messagingSenderId: "213088586635",
+        appId: "1:213088586635:web:5ee9a8985a9fb5403f7d8e"
     };
-    firebase.initializeApp(config);
+
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     // СИСТЕМА ИМЕН
@@ -116,19 +113,11 @@
     db.ref('.info/connected').on('value', s => { if(s.val()){ myPres.set(true); myPres.onDisconnect().remove(); } });
     db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
 
-    // ЛОГИКА ЧАТА (ВСПЛЫВАШКИ + ИСТОРИЯ)
-    chatIn.onfocus = () => {
-        chatHist.style.display = 'block';
-        chatHist.scrollTop = chatHist.scrollHeight;
-    };
-
+    // ЧАТ
+    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
     chatIn.onkeydown = e => {
         if (e.key === 'Enter' && chatIn.value.trim()) {
-            db.ref('chat').push({ 
-                name: userName,
-                msg: chatIn.value.trim(), 
-                t: firebase.database.ServerValue.TIMESTAMP 
-            });
+            db.ref('chat').push({ name: userName, msg: chatIn.value.trim(), t: firebase.database.ServerValue.TIMESTAMP });
             chatIn.value = '';
         }
     };
@@ -137,68 +126,42 @@
         const d = s.val();
         if (d && d.msg) {
             const sender = d.name || "Аноним";
-            
-            // Всплывающее сообщение
-            const m = document.createElement('div'); 
-            m.className = 'msg';
-            m.innerHTML = `<b>${sender}:</b> ${d.msg}`;
-            chatMsgs.appendChild(m);
-            setTimeout(() => m.remove(), 8500);
-
-            // Сообщение в историю
-            const h = document.createElement('div');
-            h.className = 'msg-history';
-            h.innerHTML = `<b>${sender}:</b> ${d.msg}`;
-            chatHist.appendChild(h);
-            chatHist.scrollTop = chatHist.scrollHeight;
-
-            if (d.name !== userName) {
-                notifySound.play().catch(() => {});
-            }
+            const m = document.createElement('div'); m.className = 'msg'; m.innerHTML = `<b>${sender}:</b> ${d.msg}`;
+            chatMsgs.appendChild(m); setTimeout(() => m.remove(), 8500);
+            const h = document.createElement('div'); h.className = 'msg-history'; h.innerHTML = `<b>${sender}:</b> ${d.msg}`;
+            chatHist.appendChild(h); chatHist.scrollTop = chatHist.scrollHeight;
+            if (d.name !== userName) notifySound.play().catch(() => {});
         }
     });
 
-    // УПРАВЛЕНИЕ КАМЕРОЙ И РИСОВАНИЕМ
+    // УПРАВЛЕНИЕ
     function getP(cx, cy) { return { x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) }; }
-
     function applyZoom(delta, centerX, centerY) {
         const oldZ = zoom; zoom = Math.min(Math.max(zoom * delta, 0.1), 80);
         offset.x = centerX - (centerX - offset.x) * (zoom / oldZ);
         offset.y = centerY - (centerY - offset.y) * (zoom / oldZ);
     }
-
     function send(x, y) {
         if(Date.now()-lastDraw < 500 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
         lastDraw = Date.now();
         db.ref('canvas/'+x+'_'+y).set({x, y, color: colorInput.value});
-        
-        const b = document.getElementById('cooldown'); 
-        b.style.transition='none'; b.style.width='100%';
+        const b = document.getElementById('cooldown'); b.style.transition='none'; b.style.width='100%';
         setTimeout(()=>{ b.style.transition='width 500ms linear'; b.style.width='0%'; }, 20);
     }
 
     let isPan = false, lastT = {x:0, y:0}, startT = {x:0, y:0}, startTime = 0, lastD = 0;
-
-    // ЗАКРЫТЬ ЧАТ ПРИ КЛИКЕ НА ХОЛСТ
     function closeChat() { chatHist.style.display = 'none'; chatIn.blur(); }
 
     canvas.addEventListener('touchstart', e => {
-        closeChat();
-        startTime = Date.now();
-        if(e.touches.length === 1) {
-            startT = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            lastT = { ...startT }; isPan = true;
-        } else if(e.touches.length === 2) {
-            isPan = false; lastD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        }
+        closeChat(); startTime = Date.now();
+        if(e.touches.length === 1) { startT = { x: e.touches[0].clientX, y: e.touches[0].clientY }; lastT = { ...startT }; isPan = true; }
+        else if(e.touches.length === 2) { isPan = false; lastD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
     }, {passive: false});
 
     window.addEventListener('touchmove', e => {
         e.preventDefault();
-        if(e.touches.length === 1 && isPan) {
-            const t = e.touches[0]; offset.x += t.clientX - lastT.x; offset.y += t.clientY - lastT.y;
-            lastT = { x: t.clientX, y: t.clientY };
-        } else if(e.touches.length === 2) {
+        if(e.touches.length === 1 && isPan) { const t = e.touches[0]; offset.x += t.clientX - lastT.x; offset.y += t.clientY - lastT.y; lastT = { x: t.clientX, y: t.clientY }; }
+        else if(e.touches.length === 2) {
             const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
             const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2, midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             applyZoom(d / lastD, midX, midY); lastD = d;
@@ -206,9 +169,7 @@
     }, {passive: false});
 
     window.addEventListener('touchend', e => {
-        if(Date.now() - startTime < 150 && Math.hypot(lastT.x - startT.x, lastT.y - startT.y) < 10) {
-            const p = getP(startT.x, startT.y); send(p.x, p.y);
-        }
+        if(Date.now() - startTime < 150 && Math.hypot(lastT.x - startT.x, lastT.y - startT.y) < 10) { const p = getP(startT.x, startT.y); send(p.x, p.y); }
         isPan = false;
     });
 
@@ -219,59 +180,25 @@
         else if(e.button===2) isPan=true; 
     };
     window.onmousemove = e => { 
-        const p=getP(e.clientX, e.clientY); document.getElementById('coords').innerText
-      const p=getP(e.clientX, e.clientY); 
-        document.getElementById('coords').innerText = `${p.x}, ${p.y}`;
+        const p=getP(e.clientX, e.clientY); document.getElementById('coords').innerText=`${p.x}, ${p.y}`;
         if(isPan) { offset.x += e.movementX; offset.y += e.movementY; }
     };
     window.onmouseup = () => isPan = false;
     window.onwheel = e => applyZoom(e.deltaY < 0 ? 1.2 : 0.8, e.clientX, e.clientY);
 
-    // ОСНОВНОЙ ЦИКЛ РЕНДЕРА (РИСОВАНИЕ)
     function render() {
-        canvas.width = window.innerWidth; 
-        canvas.height = window.innerHeight; 
-        ctx.imageSmoothingEnabled = false;
-
-        // Фон за пределами холста
-        ctx.fillStyle = "#0b0e11"; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.save(); 
-        ctx.translate(offset.x, offset.y); 
-        ctx.scale(zoom, zoom);
-        
-        // Тень для холста, чтобы он выглядел объемно
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 10 / zoom; 
-        
-        // Рисуем сам холст (микро-холст во весь экран)
+        canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false;
+        ctx.fillStyle="#0b0e11"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
         ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        
-        ctx.shadowBlur = 0; // Отключаем тень для сетки
-
-        // Сетка (появляется только при сильном приближении)
         if(zoom > 25) { 
-            ctx.beginPath(); 
-            ctx.strokeStyle = "rgba(0,0,0,0.1)"; 
-            ctx.lineWidth = 1 / zoom;
-            for(let x = 0; x <= W_SIZE; x++) { 
-                ctx.moveTo(x - W_SIZE/2, -W_SIZE/2); 
-                ctx.lineTo(x - W_SIZE/2, W_SIZE/2); 
-            }
-            for(let y = 0; y <= W_SIZE; y++) { 
-                ctx.moveTo(-W_SIZE/2, y - W_SIZE/2); 
-                ctx.lineTo(W_SIZE/2, y - W_SIZE/2); 
-            } 
+            ctx.beginPath(); ctx.strokeStyle="rgba(0,0,0,0.1)"; ctx.lineWidth=1/zoom;
+            for(let x=0;x<=W_SIZE;x++){ ctx.moveTo(x-W_SIZE/2,-W_SIZE/2); ctx.lineTo(x-W_SIZE/2,W_SIZE/2); }
+            for(let y=0;y<=W_SIZE;y++){ ctx.moveTo(-W_SIZE/2,y-W_SIZE/2); ctx.lineTo(W_SIZE/2,y-W_SIZE/2); } 
             ctx.stroke();
         } 
-        
-        ctx.restore(); 
-        requestAnimationFrame(render);
-    } 
-    
-    // Запуск проекта
-    render();
+        ctx.restore(); requestAnimationFrame(render);
+    } render();
 </script>
 </body>
 </html>
