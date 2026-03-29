@@ -2,162 +2,77 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>World Pixel | Ultra Sharp</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Pixel - Beta Status</title>
     <style>
-        :root { --accent: #007bff; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f0f0; font-family: sans-serif; touch-action: none; }
-        
-        /* СТИЛИ ДЛЯ МАКСИМАЛЬНОЙ ЧЕТКОСТИ */
-        canvas { 
-            display: block; 
-            image-rendering: -moz-crisp-edges;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: pixelated; 
-            image-rendering: crisp-edges;
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #0b0e11;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
         }
 
-        #ui { position: fixed; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 100; display: flex; justify-content: space-between; }
-        .box { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 8px 12px; color: #111; pointer-events: auto; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        
-        input[type="text"] { border: 1px solid #eee; border-radius: 6px; padding: 5px; width: 90px; font-size: 13px; outline: none; }
-        .val { font-weight: 800; color: var(--accent); }
+        .container {
+            padding: 20px;
+            border: 1px solid #2c2f33;
+            border-radius: 12px;
+            background: #161b22;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
 
-        #chat-wrap { position: fixed; bottom: 20px; left: 10px; width: 280px; pointer-events: none; z-index: 100; }
-        #chat-msgs { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-        .msg { background: white; padding: 6px 12px; border-radius: 10px; font-size: 13px; width: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .sys { color: #28a745; font-weight: bold; font-size: 11px; }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #f0f6fc;
+        }
 
-        #chat-in { width: 100%; background: white; border: 1px solid #ddd; padding: 12px; border-radius: 15px; outline: none; pointer-events: auto; box-sizing: border-box; }
-        #cd { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 0%; z-index: 110; }
+        p {
+            color: #8b949e;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #238636;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background-color: #2ea043;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .version {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #484f58;
+        }
     </style>
 </head>
 <body>
-    <div id="cd"></div>
-    <div id="ui">
-        <div class="box">
-            <input type="color" id="cp" value="#007bff" style="width:25px;height:25px;border:none;padding:0;background:none;cursor:pointer;">
-            <input type="text" id="nick-in" placeholder="Ник">
-        </div>
-        <div class="box">
-            <div style="text-align:right; font-size:11px;">
-                Онлайн: <span class="val" id="online">1</span><br>
-                <span id="coords">0, 0</span>
-            </div>
-        </div>
-    </div>
-    <div id="chat-wrap"><div id="chat-msgs"></div><input type="text" id="chat-in" placeholder="Чат..."></div>
-    <canvas id="cvs"></canvas>
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
-        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    let myNick = localStorage.getItem('wp_nick_sharp') || "Игрок" + Math.floor(Math.random()*99);
-    document.getElementById('nick-in').value = myNick;
-    document.getElementById('nick-in').onchange = (e) => { myNick = e.target.value; localStorage.setItem('wp_nick_sharp', myNick); };
-
-    const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d', {alpha: false});
-    const world = document.createElement('canvas'), wctx = world.getContext('2d', {alpha: false});
-    const W_SIZE = 2000; world.width = world.height = W_SIZE;
-    wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
-
-    let zoom = 15.0, offset = {x: window.innerWidth/2, y: window.innerHeight/2}, lastDraw = 0;
-
-    // СИНХРОНИЗАЦИЯ
-    const myRef = db.ref('presence').push();
-    db.ref('.info/connected').on('value', s => {
-        if(s.val()){
-            myRef.set({ n: myNick });
-            myRef.onDisconnect().remove();
-            db.ref('chat').push({ s: true, m: `+ ${myNick} зашел` });
-        }
-    });
-
-    db.ref('canvas').on('child_added', s => { 
-        const p = s.val(); 
-        if(p) { wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }
-    });
-    db.ref('canvas').on('child_changed', s => { 
-        const p = s.val(); 
-        if(p) { wctx.fillStyle = p.c; wctx.fillRect(p.x, p.y, 1, 1); }
-    });
-    db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren() || 1);
-
-    const getP = (cx, cy) => ({ x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) });
-
-    function place(x, y) {
-        if(Date.now() - lastDraw < 300 || x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
-        lastDraw = Date.now();
-        db.ref('canvas/'+x+'_'+y).set({x, y, c: document.getElementById('cp').value});
-        const b = document.getElementById('cd'); b.style.transition='none'; b.style.width='100%';
-        setTimeout(()=>{ b.style.transition='width 300ms linear'; b.style.width='0%'; }, 20);
-    }
-
-    let isPan = false, lastP = {x:0, y:0}, startP = {x:0, y:0}, isDrag = false, lastDist = 0;
-
-    function handleZoom(d, mx, my) {
-        const oldZ = zoom;
-        zoom = Math.min(Math.max(zoom * d, 0.5), 150);
-        offset.x = mx - (mx - offset.x) * (zoom / oldZ);
-        offset.y = my - (my - offset.y) * (zoom / oldZ);
-    }
-
-    cvs.onwheel = e => { e.preventDefault(); handleZoom(e.deltaY < 0 ? 1.25 : 0.75, e.clientX, e.clientY); };
-    cvs.onmousedown = e => { if(e.button===0){ isDrag=false; startP={x:e.clientX, y:e.clientY}; } else isPan=true; lastP={x:e.clientX, y:e.clientY}; };
-    window.onmousemove = e => { 
-        const p = getP(e.clientX, e.clientY); document.getElementById('coords').innerText = p.x + ", " + p.y;
-        if(isPan || (e.buttons===1 && isDrag)){ offset.x += e.clientX-lastP.x; offset.y += e.clientY-lastP.y; }
-        if(Math.hypot(e.clientX-startP.x, e.clientY-startP.y) > 5) isDrag = true;
-        lastP = {x:e.clientX, y:e.clientY};
-    };
-    window.onmouseup = e => { if(e.button===0 && !isDrag && document.activeElement.tagName !== 'INPUT') place(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y); isPan=false; };
-
-    cvs.addEventListener('touchstart', e => { 
-        isDrag=false; if(e.touches.length===1){ startP={x:e.touches[0].clientX, y:e.touches[0].clientY}; lastP={...startP}; } 
-        else if(e.touches.length===2) { lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); } 
-    }, {passive:false});
-    cvs.addEventListener('touchmove', e => {
-        e.preventDefault();
-        if(e.touches.length===1){ offset.x += e.touches[0].clientX-lastP.x; offset.y += e.touches[0].clientY-lastP.y; if(Math.hypot(e.touches[0].clientX-startP.x, e.touches[0].clientY-startP.y)>10) isDrag=true; lastP={x:e.touches[0].clientX, y:e.touches[0].clientY}; }
-        else if(e.touches.length===2){ isDrag=true; const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); const mx=(e.touches[0].clientX+e.touches[1].clientX)/2, my=(e.touches[0].clientY+e.touches[1].clientY)/2; handleZoom(d / lastDist, mx, my); lastDist=d; }
-    }, {passive:false});
-    cvs.addEventListener('touchend', e => { if(e.touches.length===0 && !isDrag) place(getP(startP.x, startP.y).x, getP(startP.x, startP.y).y); });
-
-    // ЧАТ
-    const chatIn = document.getElementById('chat-in'), chatMsgs = document.getElementById('chat-msgs');
-    chatIn.onkeydown = e => { if(e.key==='Enter' && chatIn.value.trim()){ db.ref('chat').push({n:myNick, m:chatIn.value.trim()}); chatIn.value=''; chatIn.blur(); }};
-    db.ref('chat').limitToLast(6).on('child_added', s => {
-        const d = s.val(); const m = document.createElement('div');
-        m.className = d.s ? 'msg sys' : 'msg';
-        m.innerHTML = d.s ? d.m : `<b>${d.n}:</b> ${d.m}`;
-        chatMsgs.appendChild(m); setTimeout(()=>m.remove(), 7000);
-    });
-
-    function render() {
-        cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+    <div class="container">
+        <h1>Бета обновлений пока нет</h1>
+        <p>Мы работаем над новыми фишками. Загляните позже!</p>
         
-        // ВЫКЛЮЧАЕМ РАЗМЫТИЕ ПЕРЕД ОТРИСОВКОЙ
-        ctx.imageSmoothingEnabled = false;
-        ctx.mozImageSmoothingEnabled = false;
-        ctx.webkitImageSmoothingEnabled = false;
-        ctx.msImageSmoothingEnabled = false;
+        <a href="https://world-pixel-ten.vercel.app/" class="btn">Вернуться на главный холст</a>
+        
+        <div class="version">World Pixel Build: 2026.3</div>
+    </div>
 
-        ctx.fillStyle = "#f0f0f0"; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.save();
-        ctx.translate(offset.x, offset.y);
-        ctx.scale(zoom, zoom);
-        ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2);
-        ctx.restore();
-        requestAnimationFrame(render);
-    }
-    render(); window.oncontextmenu = e => e.preventDefault();
-</script>
 </body>
 </html>
