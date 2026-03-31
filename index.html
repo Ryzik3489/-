@@ -2,77 +2,226 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Pixel - Beta Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>World Pixel - Quests & Ranks</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #0b0e11;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-        }
+        body { margin: 0; overflow: hidden; background: #0b0e11; font-family: sans-serif; }
+        canvas { display: block; touch-action: none; }
+        
+        /* ИНТЕРФЕЙС */
+        .ui-panel { position: fixed; z-index: 10; pointer-events: none; width: 100%; height: 100%; }
+        .ui-element { pointer-events: auto; background: rgba(22, 27, 34, 0.9); border: 1px solid #30363d; color: white; border-radius: 8px; padding: 10px; }
 
-        .container {
-            padding: 20px;
-            border: 1px solid #2c2f33;
-            border-radius: 12px;
-            background: #161b22;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
+        /* МЕНЮ КВЕСТОВ */
+        #quest-menu { position: absolute; top: 60px; left: 10px; width: 200px; display: none; }
+        #quest-toggle { position: absolute; top: 10px; left: 10px; cursor: pointer; font-weight: bold; background: #238636; }
+        .progress-bar { width: 100%; height: 10px; background: #21262d; border-radius: 5px; margin-top: 5px; overflow: hidden; }
+        #progress-fill { height: 100%; background: #2ea043; width: 0%; transition: width 0.3s; }
 
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #f0f6fc;
-        }
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
+        #top-info { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; }
+        #coords { font-size: 14px; color: #8b949e; }
+        input[type="color"] { border: none; width: 30px; height: 30px; cursor: pointer; background: none; }
 
-        p {
-            color: #8b949e;
-            margin-bottom: 30px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #238636;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-            transition: background 0.2s, transform 0.1s;
-        }
-
-        .btn:hover {
-            background-color: #2ea043;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        .version {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #484f58;
-        }
+        /* ЧАТ */
+        #chat-container { position: absolute; bottom: 10px; left: 10px; width: 300px; }
+        #chat-messages { height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 5px; pointer-events: none; }
+        #chat-history { position: absolute; bottom: 40px; left: 0; width: 100%; height: 250px; background: rgba(13, 17, 23, 0.95); display: none; overflow-y: auto; padding: 5px; border: 1px solid #30363d; }
+        #chat-input { width: 100%; background: #0d1117; border: 1px solid #30363d; color: white; padding: 8px; border-radius: 4px; outline: none; }
+        .msg { background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; width: fit-content; animation: fadeOut 7s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        .rank { color: #ffca28; font-weight: bold; margin-right: 4px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Бета обновлений пока нет</h1>
-        <p>Мы работаем над новыми фишками. Загляните позже!</p>
-        
-        <a href="https://world-pixel-ten.vercel.app/" class="btn">Вернуться на главный холст</a>
-        
-        <div class="version">World Pixel Build: 2026.3</div>
+<div class="ui-panel">
+    <button id="quest-toggle" class="ui-element" onclick="toggleQuests()">📜 ЗАДАНИЯ</button>
+    <div id="quest-menu" class="ui-element">
+        <b id="quest-title">Загрузка...</b>
+        <div id="quest-desc">Ставь пиксели, чтобы получить XP!</div>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <div id="quest-stats" style="font-size: 12px; margin-top: 5px;">0 / 0</div>
     </div>
 
+    <div id="top-info" class="ui-element">
+        <div id="coords">0, 0 | XP: 0 [НОВИЧОК]</div>
+        <input type="color" id="colorPicker" value="#000000">
+        <input type="text" id="nick-input" placeholder="Ник..." style="width: 80px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 4px;">
+        <div style="color: #2ea043;">● <span id="online">1</span></div>
+    </div>
+
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <div id="chat-history"></div>
+        <input type="text" id="chat-input" placeholder="Нажми Enter, чтобы написать...">
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    // --- КОНФИГ ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAbBIPW5RaaBQYBmlXhVVBV0606QKBvJng",
+        authDomain: "telega-85cca.firebaseapp.com",
+        databaseURL: "https://telega-85cca-default-rtdb.firebaseio.com",
+        projectId: "telega-85cca",
+        storageBucket: "telega-85cca.firebasestorage.app",
+        messagingSenderId: "213088586635",
+        appId: "1:213088586635:web:5ee9a8985a9fb5403f7d8e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const TG_TOKEN = "8390822032:AAGQP2wmFL8SblWKv-Lj7BSWOUkoCkMBSyk";
+    const TG_CHAT_ID = "6648834014";
+
+    // --- ЛОГИКА ИГРОКА ---
+    let userXP = parseInt(localStorage.getItem('wp_xp')) || 0;
+    let userName = localStorage.getItem('worldpixel_name') || "Гость_" + Math.floor(Math.random() * 99);
+    document.getElementById('nick-input').value = userName;
+
+    const getRank = (xp) => {
+        if (xp >= 5000) return "[ЛЕГЕНДА]";
+        if (xp >= 2000) return "[МАСТЕР]";
+        if (xp >= 500) return "[ХУДОЖНИК]";
+        return "[НОВИЧОК]";
+    };
+
+    function addXP(amount) {
+        userXP += amount;
+        localStorage.setItem('wp_xp', userXP);
+        updateUI();
+    }
+
+    function updateUI() {
+        const rank = getRank(userXP);
+        document.getElementById('coords').innerText = `${curX}, ${curY} | XP: ${userXP} ${rank}`;
+        document.getElementById('progress-fill').style.width = (currentQuest.progress / currentQuest.target * 100) + "%";
+        document.getElementById('quest-stats').innerText = `${currentQuest.progress} / ${currentQuest.target}`;
+    }
+
+    // --- КВЕСТЫ ---
+    let currentQuest = { target: 10, progress: 0, reward: 50, active: true };
+    function toggleQuests() {
+        const menu = document.getElementById('quest-menu');
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function generateNewQuest() {
+        currentQuest.target = Math.floor(Math.random() * 15) + 5;
+        currentQuest.progress = 0;
+        currentQuest.active = true;
+        document.getElementById('quest-title').innerText = `Задание: Рисуй!`;
+        document.getElementById('quest-desc').innerText = `Поставь ${currentQuest.target} пикселей`;
+        updateUI();
+    }
+    generateNewQuest();
+
+    // --- ОНЛАЙН И ЧАТ ---
+    const sessionId = Math.random().toString(36).substring(7);
+    const pageLoadTime = Date.now();
+    db.ref('presence/' + sessionId).set({ name: userName, rank: getRank(userXP) });
+    db.ref('presence/' + sessionId).onDisconnect().remove();
+    db.ref('presence').on('value', s => { document.getElementById('online').innerText = s.numChildren(); });
+
+    const chatIn = document.getElementById('chat-input'), chatHist = document.getElementById('chat-history'), chatMsgs = document.getElementById('chat-messages');
+    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
+    
+    chatIn.onkeydown = e => {
+        if(e.key === 'Enter' && chatIn.value.trim()){
+            const val = chatIn.value.trim();
+            db.ref('chat').push({ name: userName, rank: getRank(userXP), msg: val, t: firebase.database.ServerValue.TIMESTAMP });
+            chatIn.value = '';
+        }
+    };
+
+    db.ref('chat').limitToLast(15).on('child_added', s => {
+        const d = s.val(); if(!d) return;
+        const r = d.rank || "[НОВИЧОК]";
+        const html = `<span class="rank">${r}</span> <b>${d.name}:</b> ${d.msg}`;
+        const hDiv = document.createElement('div'); hDiv.innerHTML = html; chatHist.appendChild(hDiv);
+        chatHist.scrollTop = chatHist.scrollHeight;
+        if(d.t > pageLoadTime - 2000) {
+            const mDiv = document.createElement('div'); mDiv.className = 'msg'; mDiv.innerHTML = html;
+            chatMsgs.appendChild(mDiv); setTimeout(() => mDiv.remove(), 7000);
+        }
+    });
+
+    // --- ХОЛСТ (ПК + ТЕЛЕФОН) ---
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d', { alpha: false });
+    const world = document.createElement('canvas'), wctx = world.getContext('2d', { alpha: false });
+    const W_SIZE = 2000; world.width = world.height = W_SIZE; wctx.fillStyle = "#ffffff"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
+    
+    let zoom = 8.0, offset = { x: window.innerWidth/2, y: window.innerHeight/2 }, curX=0, curY=0;
+
+    db.ref('canvas').on('child_added', s => { const p = s.val(); wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); });
+    db.ref('canvas').on('child_changed', s => { const p = s.val(); wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1); });
+
+    function getP(cx, cy) { return { x: Math.floor((cx-offset.x)/zoom + W_SIZE/2), y: Math.floor((cy-offset.y)/zoom + W_SIZE/2) }; }
+    
+    function send(x, y) {
+        if(x<0 || x>=W_SIZE || y<0 || y>=W_SIZE) return;
+        db.ref('canvas/'+x+'_'+y).set({x, y, color: document.getElementById('colorPicker').value});
+        addXP(1);
+        if(currentQuest.active) {
+            currentQuest.progress++;
+            if(currentQuest.progress >= currentQuest.target) {
+                currentQuest.active = false;
+                addXP(currentQuest.reward);
+                alert("🏆 Квест выполнен! +50 XP");
+                setTimeout(generateNewQuest, 10000);
+            }
+        }
+        updateUI();
+    }
+
+    // Управление мышью
+    let isPan = false;
+    canvas.onmousedown = e => {
+        chatHist.style.display = 'none';
+        if(e.button === 0) send(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y);
+        else if(e.button === 2) isPan = true;
+    };
+    window.onmousemove = e => {
+        const p = getP(e.clientX, e.clientY); curX = p.x; curY = p.y; updateUI();
+        if(isPan) { offset.x += e.movementX; offset.y += e.movementY; }
+    };
+    window.onmouseup = () => isPan = false;
+    window.onwheel = e => {
+        const oldZ = zoom; zoom = Math.min(Math.max(zoom * (e.deltaY < 0 ? 1.2 : 0.8), 0.1), 80);
+        offset.x = e.clientX - (e.clientX - offset.x) * (zoom / oldZ);
+        offset.y = e.clientY - (e.clientY - offset.y) * (zoom / oldZ);
+    };
+
+    // Управление тачем
+    let lastT = {x:0, y:0}, startT = {x:0, y:0}, startTime = 0;
+    canvas.addEventListener('touchstart', e => {
+        startTime = Date.now();
+        if(e.touches.length === 1) { 
+            startT = { x: e.touches[0].clientX, y: e.touches[0].clientY }; lastT = {...startT}; isPan = true; 
+        }
+    });
+    window.addEventListener('touchmove', e => {
+        if(e.touches.length === 1 && isPan) {
+            offset.x += e.touches[0].clientX - lastT.x; offset.y += e.touches[0].clientY - lastT.y;
+            lastT = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    });
+    window.addEventListener('touchend', () => {
+        if(isPan && Date.now() - startTime < 200) send(getP(startT.x, startT.y).x, getP(startT.x, startT.y).y);
+        isPan = false;
+    });
+
+    function render() {
+        canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false;
+        ctx.fillStyle="#0b0e11"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(zoom, zoom);
+        ctx.drawImage(world, -W_SIZE/2, -W_SIZE/2); ctx.restore();
+        requestAnimationFrame(render);
+    } render();
+</script>
 </body>
 </html>
