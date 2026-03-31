@@ -3,69 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>World Pixel BETA</title>
+    <title>World Pixel - Quest Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #eef2f6; font-family: 'Segoe UI', sans-serif; }
-        canvas { display: block; touch-action: none; background: #fff; cursor: crosshair; }
+        body { margin: 0; overflow: hidden; background: #eef2f6; font-family: 'Segoe UI', sans-serif; position: fixed; width: 100%; height: 100%; }
+        canvas { display: block; touch-action: none; background: #fff; }
         
-        /* СТИЛЬ ИНТЕРФЕЙСА */
         .ui-element { 
-            pointer-events: auto; background: rgba(255, 255, 255, 0.95); 
+            pointer-events: auto; background: rgba(255, 255, 255, 0.98); 
             backdrop-filter: blur(10px); border-radius: 18px; 
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4);
         }
 
-        #top-info { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 15px; padding: 10px 25px; }
-        #coords { font-size: 14px; font-weight: 600; color: #334155; min-width: 130px; }
-        input[type="color"] { border: none; width: 34px; height: 34px; cursor: pointer; background: none; border-radius: 50%; padding: 0; }
+        #top-info { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 10px; padding: 10px 15px; width: 90%; max-width: 420px; justify-content: space-between; }
+        #coords { font-size: 13px; font-weight: 700; color: #334155; }
+        input[type="color"] { border: none; width: 35px; height: 35px; cursor: pointer; background: none; border-radius: 50%; padding: 0; }
 
-        /* КВЕСТЫ */
-        #quest-container { position: fixed; top: 80px; right: 20px; z-index: 100; text-align: right; }
-        #quest-menu { width: 250px; padding: 18px; margin-bottom: 12px; display: none; text-align: left; }
-        #quest-toggle { padding: 12px 24px; border-radius: 30px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.2); }
-        .progress-bar { width: 100%; height: 8px; background: #f1f5f9; border-radius: 10px; margin: 12px 0; overflow: hidden; }
-        #progress-fill { height: 100%; background: #10b981; width: 0%; transition: 0.5s; }
+        /* ИСПРАВЛЕННОЕ МЕНЮ КВЕСТОВ */
+        #quest-container { position: fixed; top: 75px; right: 10px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; }
+        #quest-menu { width: 220px; padding: 15px; margin-bottom: 10px; display: none; text-align: left; }
+        #quest-toggle { padding: 12px 20px; border-radius: 25px; border: none; background: #10b981; color: white; font-weight: bold; font-size: 13px; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+        
+        .q-title { font-size: 15px; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px; }
+        .q-desc { font-size: 12px; color: #64748b; line-height: 1.3; }
+        .progress-bar { width: 100%; height: 10px; background: #f1f5f9; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+        #progress-fill { height: 100%; background: #10b981; width: 0%; transition: 0.4s; }
+        #q-stats { font-size: 12px; font-weight: 800; color: #10b981; }
 
-        /* ЧАТ */
-        #chat-container { position: fixed; bottom: 20px; left: 20px; z-index: 100; width: 320px; pointer-events: none; }
-        #chat-messages { height: 140px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-        #chat-history { position: absolute; bottom: 65px; left: 0; width: 100%; height: 280px; display: none; overflow-y: auto; padding: 18px; pointer-events: auto; }
-        #chat-input { width: 100%; padding: 14px 22px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; pointer-events: auto; font-size: 14px; background: white; }
+        #chat-container { position: fixed; bottom: 15px; left: 10px; z-index: 100; width: calc(100% - 20px); max-width: 320px; pointer-events: none; }
+        #chat-messages { height: 110px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+        #chat-input { width: 100%; padding: 14px 22px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; pointer-events: auto; font-size: 15px; background: white; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 
-        /* УВЕДОМЛЕНИЯ */
         #notify-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; }
-        .notify { background: #fff; padding: 12px 30px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-weight: 700; border-left: 5px solid #10b981; animation: notifyPop 3.5s forwards; }
-        @keyframes notifyPop { 0% { opacity: 0; transform: translateY(30px); } 10%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
-
-        .rank-tag { color: #f59e0b; font-weight: 800; font-size: 11px; margin-right: 6px; }
-        .msg-pop { background: white; padding: 8px 14px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); animation: slideIn 0.3s ease-out; width: fit-content; }
+        .notify { background: #fff; padding: 12px 25px; border-radius: 30px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); font-weight: 700; border-left: 5px solid #10b981; animation: notifyPop 3.5s forwards; }
+        
+        @keyframes notifyPop { 0% { opacity: 0; transform: translateY(20px); } 10%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
+        .msg-pop { background: white; padding: 8px 14px; border-radius: 15px; font-size: 13px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); animation: slideIn 0.3s ease-out; width: fit-content; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
-<body oncontextmenu="return false;"> <div id="top-info" class="ui-element">
+<body oncontextmenu="return false;">
+
+<div id="top-info" class="ui-element">
     <input type="color" id="colorPicker" value="#000000">
     <div id="coords">Загрузка...</div>
-    <input type="text" id="nick-input" placeholder="Ник" style="width: 90px; border: none; background: #f1f5f9; padding: 6px 12px; border-radius: 12px; font-weight: 600;">
+    <input type="text" id="nick-input" placeholder="Ник" style="width: 80px; border: none; background: #f1f5f9; padding: 5px 10px; border-radius: 10px; font-weight: 600;">
     <div style="color: #10b981; font-weight: 800;">● <span id="online">1</span></div>
 </div>
 
 <div id="quest-container">
     <div id="quest-menu" class="ui-element">
-        <b>🎯 Задание</b>
+        <span class="q-title">🎯 Задание: Маляр</span>
+        <span class="q-desc">Рисуй любые пиксели на холсте, чтобы получить опыт!</span>
         <div class="progress-bar"><div id="progress-fill"></div></div>
-        <div id="q-stats" style="font-size: 11px; font-weight: bold; color: #10b981;">0 / 0</div>
+        <div id="q-stats">0 / 10 (Награда: 50 XP)</div>
     </div>
-    <button id="quest-toggle" onclick="toggleQuests()">📜 ЗАДАНИЯ</button>
+    <button id="quest-toggle" onclick="toggleQuests()">📜 ЗАДАНИЕ</button>
 </div>
 
 <div id="notify-container"></div>
 
 <div id="chat-container">
     <div id="chat-messages"></div>
-    <div id="chat-history" class="ui-element"></div>
-    <input type="text" id="chat-input" placeholder="Напиши что-нибудь...">
+    <input type="text" id="chat-input" placeholder="Напиши сообщение...">
 </div>
 
 <canvas id="canvas"></canvas>
@@ -85,9 +86,9 @@
     const db = firebase.database();
 
     let userXP = parseInt(localStorage.getItem('wp_xp')) || 0;
-    let userName = localStorage.getItem('worldpixel_name') || "Игрок_" + Math.floor(Math.random() * 99);
+    let userName = localStorage.getItem('worldpixel_name') || "Художник_" + Math.floor(Math.random() * 99);
     let curX = 0, curY = 0, lastDraw = 0;
-    const pageLoadTime = Date.now();
+    const W_SIZE = 2000;
 
     document.getElementById('nick-input').value = userName;
     document.getElementById('nick-input').onchange = (e) => {
@@ -98,121 +99,126 @@
     function showNotify(text) {
         const container = document.getElementById('notify-container');
         const el = document.createElement('div');
-        el.className = 'notify';
-        el.innerText = text;
-        container.appendChild(el);
-        setTimeout(() => el.remove(), 3500);
+        el.className = 'notify'; el.innerText = text;
+        container.appendChild(el); setTimeout(() => el.remove(), 3500);
     }
 
     // ЧАТ
     const chatIn = document.getElementById('chat-input');
-    const chatHist = document.getElementById('chat-history');
     const chatMsgs = document.getElementById('chat-messages');
 
-    chatIn.onfocus = () => { chatHist.style.display = 'block'; chatHist.scrollTop = chatHist.scrollHeight; };
-    chatIn.onblur = () => { setTimeout(() => chatHist.style.display = 'none', 200); };
-    
     chatIn.onkeydown = (e) => {
         if (e.key === 'Enter' && chatIn.value.trim()) {
-            db.ref('chat').push({
-                name: userName,
-                rank: userXP >= 300 ? "[МАСТЕР]" : "[НОВИЧОК]",
-                msg: chatIn.value,
-                t: firebase.database.ServerValue.TIMESTAMP
-            });
-            chatIn.value = '';
+            db.ref('chat').push({ name: userName, msg: chatIn.value, t: firebase.database.ServerValue.TIMESTAMP });
+            chatIn.value = ''; chatIn.blur();
         }
     };
 
-    db.ref('chat').limitToLast(20).on('child_added', (s) => {
+    db.ref('chat').limitToLast(5).on('child_added', (s) => {
         const d = s.val();
-        if (d.msg && (d.msg.includes("вышел") || d.msg.includes("LOG:"))) return;
-        const html = `<div><span class="rank-tag" style="color:${userXP>=300?'#f59e0b':'#94a3b8'}">${d.rank}</span><b>${d.name}:</b> ${d.msg}</div>`;
-        chatHist.innerHTML += html;
-        chatHist.scrollTop = chatHist.scrollHeight;
-        if (d.t > pageLoadTime - 1000) {
-            const pop = document.createElement('div');
-            pop.className = 'msg-pop'; pop.innerHTML = html;
-            chatMsgs.appendChild(pop); setTimeout(() => pop.remove(), 6000);
-        }
+        if (d.t < Date.now() - 5000) return;
+        const pop = document.createElement('div');
+        pop.className = 'msg-pop'; pop.innerHTML = `<b>${d.name}:</b> ${d.msg}`;
+        chatMsgs.appendChild(pop); setTimeout(() => pop.remove(), 6000);
     });
 
     // КВЕСТЫ
-    let quest = { target: 10, progress: 0 };
-    window.toggleQuests = () => {
+    let quest = { progress: 0, target: 10 };
+    function toggleQuests() {
         const m = document.getElementById('quest-menu');
         m.style.display = m.style.display === 'block' ? 'none' : 'block';
-    };
+    }
 
     function updateUI() {
-        document.getElementById('progress-fill').style.width = (quest.progress / quest.target * 100) + "%";
-        document.getElementById('q-stats').innerText = `${quest.progress} / ${quest.target}`;
         document.getElementById('coords').innerText = `${curX}, ${curY} | ${userXP} XP`;
+        document.getElementById('progress-fill').style.width = (quest.progress / quest.target * 100) + "%";
+        document.getElementById('q-stats').innerText = `${quest.progress} / ${quest.target} (Награда: 50 XP)`;
     }
 
     // ОНЛАЙН
     const myRef = db.ref('presence').push();
-    myRef.set({ name: userName, t: pageLoadTime });
-    myRef.onDisconnect().remove();
+    myRef.set({ name: userName }); myRef.onDisconnect().remove();
     db.ref('presence').on('value', s => document.getElementById('online').innerText = s.numChildren());
 
     // ХОЛСТ
     const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d', { alpha: false });
     const world = document.createElement('canvas'), wctx = world.getContext('2d', { alpha: false });
-    const W_SIZE = 2000; world.width = world.height = W_SIZE;
+    world.width = world.height = W_SIZE;
     wctx.fillStyle = "white"; wctx.fillRect(0,0,W_SIZE,W_SIZE);
 
-    let zoom = 12, offset = { x: window.innerWidth/2, y: window.innerHeight/2 };
+    let zoom = 10, offset = { x: window.innerWidth/2, y: window.innerHeight/2 };
 
     db.ref('canvas').on('child_added', s => {
-        const p = s.val();
-        wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1);
+        const p = s.val(); wctx.fillStyle = p.color; wctx.fillRect(p.x, p.y, 1, 1);
     });
 
     function drawPixel(x, y) {
-        if (Date.now() - lastDraw < 250 || x < 0 || x >= W_SIZE || y < 0 || y >= W_SIZE) return;
+        if (Date.now() - lastDraw < 300 || x < 0 || x >= W_SIZE || y < 0 || y >= W_SIZE) return;
         lastDraw = Date.now();
         db.ref('canvas/' + x + '_' + y).set({ x, y, color: document.getElementById('colorPicker').value });
-        userXP++; quest.progress++;
+        
+        userXP++;
+        quest.progress++;
         if (quest.progress >= quest.target) {
-            userXP += 50; quest.progress = 0;
+            userXP += 50; 
+            quest.progress = 0;
             showNotify("🏆 Квест выполнен! +50 XP");
         }
-        localStorage.setItem('wp_xp', userXP); updateUI();
+        localStorage.setItem('wp_xp', userXP);
+        updateUI();
     }
 
-    // УПРАВЛЕНИЕ БЕЗ МЕНЮ
-    let isPan = false;
-    const getP = (cx, cy) => ({ x: Math.floor((cx - offset.x) / zoom + W_SIZE / 2), y: Math.floor((cy - offset.y) / zoom + W_SIZE / 2) });
-    
-    canvas.onmousedown = e => { 
-        e.preventDefault(); // Запрет стандартного поведения
-        const p = getP(e.clientX, e.clientY);
-        if (e.button === 0) drawPixel(p.x, p.y); 
-        else if (e.button === 2) isPan = true; 
-    };
+    // УПРАВЛЕНИЕ (МЫШЬ + ТАЧ)
+    let isPan = false, lastTouch = null, startDist = 0;
+    const getP = (cx, cy) => ({
+        x: Math.floor((cx - offset.x) / zoom + W_SIZE / 2),
+        y: Math.floor((cy - offset.y) / zoom + W_SIZE / 2)
+    });
 
+    canvas.onmousedown = e => { if(e.button === 0) drawPixel(getP(e.clientX, e.clientY).x, getP(e.clientX, e.clientY).y); else isPan = true; };
     window.onmousemove = e => { 
-        const p = getP(e.clientX, e.clientY);
-        curX = p.x; curY = p.y; updateUI(); 
-        if (isPan) { offset.x += e.movementX; offset.y += e.movementY; } 
+        const p = getP(e.clientX, e.clientY); curX = p.x; curY = p.y; updateUI();
+        if(isPan) { offset.x += e.movementX; offset.y += e.movementY; }
     };
-
     window.onmouseup = () => isPan = false;
-    
-    // Глобальная блокировка контекстного меню
-    window.oncontextmenu = (e) => {
-        e.preventDefault();
-        return false;
+    window.onwheel = e => {
+        const oldZ = zoom; zoom = Math.min(Math.max(zoom * (e.deltaY < 0 ? 1.1 : 0.9), 0.5), 60);
+        offset.x = e.clientX - (e.clientX - offset.x) * (zoom / oldZ);
+        offset.y = e.clientY - (e.clientY - offset.y) * (zoom / oldZ);
     };
 
-    window.onwheel = e => { 
-        e.preventDefault();
-        const oldZ = zoom; 
-        zoom = Math.min(Math.max(zoom * (e.deltaY < 0 ? 1.2 : 0.8), 0.5), 60); 
-        offset.x = e.clientX - (e.clientX - offset.x) * (zoom / oldZ); 
-        offset.y = e.clientY - (e.clientY - offset.y) * (zoom / oldZ); 
+    canvas.ontouchstart = e => {
+        if (e.touches.length === 1) {
+            lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            const p = getP(lastTouch.x, lastTouch.y);
+            setTimeout(() => { if(!isPan) drawPixel(p.x, p.y); }, 60);
+        } else if (e.touches.length === 2) {
+            startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        }
     };
+
+    canvas.ontouchmove = e => {
+        e.preventDefault();
+        if (e.touches.length === 1 && lastTouch) {
+            isPan = true;
+            offset.x += e.touches[0].clientX - lastTouch.x;
+            offset.y += e.touches[0].clientY - lastTouch.y;
+            lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const oldZ = zoom;
+            zoom = Math.min(Math.max(zoom * (dist / startDist), 0.5), 60);
+            offset.x = midX - (midX - offset.x) * (zoom / oldZ);
+            offset.y = midY - (midY - offset.y) * (zoom / oldZ);
+            startDist = dist;
+        }
+        const p = getP(e.touches[0].clientX, e.touches[0].clientY);
+        curX = p.x; curY = p.y; updateUI();
+    };
+
+    canvas.ontouchend = () => { isPan = false; lastTouch = null; };
 
     function render() {
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
